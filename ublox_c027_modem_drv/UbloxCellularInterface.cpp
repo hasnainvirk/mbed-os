@@ -14,18 +14,32 @@
  */
 
 #include <string.h>
-#include "mbed_trace.h"
 #include "UbloxCellularInterface.h"
 #include "C027_api.h"
-
 #include "ppp_lwip.h"
-
-
 #include "BufferedSerial.h"
+#if defined(FEATURE_COMMON_PAL)
+#include "mbed_trace.h"
+#define TRACE_GROUP "UCID"
+#else
+#define tr_debug(...) (void(0)) //dummies if feature common pal is not added
+#define tr_info(...)  (void(0)) //dummies if feature common pal is not added
+#define tr_error(...) (void(0)) //dummies if feature common pal is not added
+#endif //defined(FEATURE_COMMON_PAL)
 
-
-#define TRACE_GROUP "UCI"
 #define BAUD_RATE   115200
+
+static void ppp_connection_status_cb(int status);
+static Mutex mtx;
+static void lock()
+{
+    mtx.lock();
+}
+
+static void unlock()
+{
+    mtx.unlock();
+}
 
 device_info *dev_info;
 
@@ -33,6 +47,38 @@ static void parser_abort(ATParser *at)
 {
     at->abort();
 }
+
+/* A callback function set in mbed_ppp_init() and will be called by
+ * the underlying network stack when the status of PPP link changes.
+ * This method could be called from a separate data pumping thread.
+ * So we should apply proper mutex unlocking and locking */
+static void ppp_connection_status_cb(int status)
+{
+    unlock();
+    switch (status) {
+        case CONNECTED:
+            tr_info("PPP link established");
+            break;
+        case INVALID_PARAMETERS:
+        case INVALID_SESSION:
+        case DEVICE_ERROR:
+        case RESOURCE_ALLOC_ERROR:
+        case USER_INTERRUPTION:
+        case CONNECTION_LOST:
+        case AUTHENTICATION_FAILED:
+        case PROTOCOL_ERROR:
+        case IDLE_TIMEOUT:
+        case MAX_CONNECT_TIME_ERROR:
+        case UNKNOWN:
+            tr_error("PPP link couldn't be established");
+            break;
+        default:
+            break;
+    }
+    lock();
+    dev_info->ppp_status = static_cast<ppp_connection_status>(status);
+}
+
 
 void set_nwk_status(unsigned int AcTStatus)
 {
@@ -241,6 +287,9 @@ UbloxCellularInterface::UbloxCellularInterface(bool use_USB)
     _pin = dummy_pin;
 
     dev_info = new device_info;
+    dev_info->dev = DEV_TYPE_NONE;
+    dev_info->connection = NO_CONNECTION;
+    dev_info->ppp_status = NO_PPP_CONNECTION;
 
 }
 
@@ -255,24 +304,17 @@ UbloxCellularInterface::~UbloxCellularInterface()
 bool UbloxCellularInterface::nwk_registration_status()
 {
     /* Check current network status */
-    unsigned int registered;
     bool success = false;
 
     // +COPS: <mode>[,<format>,<oper>[,<AcT>]]
-    unsigned int registration_mode;
     char operator_name[20];
     unsigned int active_network_mode;
     success = _at->send("AT+COPS?")
-            && _at->recv("+COPS: %u,%*u,\"%19[^\"]\",%u\nOK\n",&registration_mode, operator_name, &active_network_mode);
+            && _at->recv("+COPS: %*u,%*u,\"%19[^\"]\",%u\nOK\n", operator_name, &active_network_mode);
 
     if(!success) {
         goto failure;
     }
-
-
-   if (registration_mode == 0) {
-
-   }
 
     if (active_network_mode > 0) {
         success = true;
