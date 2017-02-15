@@ -136,6 +136,7 @@ public:
     bool nwk_registration_status();
     virtual nsapi_error_t connect();
     virtual nsapi_error_t disconnect();
+    void PowerOff();
 
 protected:
     /** Provide access to the underlying stack

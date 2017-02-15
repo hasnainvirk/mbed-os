@@ -223,7 +223,7 @@ static void CMT_URC(ATParser *at)
     //AT Command Manual UBX-13002752, section 11.8.2
     char sms[50];
     char service_timestamp[15];
-    bool success = at->recv(": %49[^\"]\",,%14[^\"]\"\n", sms, service_timestamp);
+    at->recv(": %49[^\"]\",,%14[^\"]\"\n", sms, service_timestamp);
 
     tr_info("SMS:%s, %s", service_timestamp, sms);
 
@@ -244,9 +244,21 @@ static bool UCMT_URC(ATParser *at)
 
 }*/
 
+static bool set_UDCONF(ATParser *at)
+{
+    bool success = at->send("AT+UDCONF=66,1") && at->recv("OK");
+    return success;
+}
+
 static bool set_CGDCONT(ATParser *at)
 {
-    bool success = at->send("AT+CGDCONT=1, \"IP\",\"internet\"") && at->recv("OK");
+    bool success = at->send("AT+CGDCONT=1,\"IPV4V6\",\"internet\"") && at->recv("OK");
+
+    if (!success) {
+        /* Try enabling IPv6 (for next boot). We don't care if this command fails - find out if IPv6 works next time.  */
+        set_UDCONF(at);
+        success = at->send("AT+CGDCONT=1,\"IP\",\"internet\"") && at->recv("OK");
+    }
 
     return success;
 }
@@ -382,19 +394,17 @@ bool UbloxCellularInterface::preliminary_setup()
 
     _at->setTimeout(8000);
 
-    success = _at->send("AT E0") //turn off modem echoing
-            && _at->recv("OK")
-            && _at->send("AT+CMEE=2") //turn on verbose responses
-            && _at->recv("OK")
-            && _at->send("AT+IPR=115200") //setup baud rate
-            && _at->recv("OK");
+    success = _at->send("ATE0;" //turn off modem echoing
+                        "+CMEE=2;" //turn on verbose responses
+                        "+IPR=115200") //setup baud rate
+           && _at->recv("OK");
 
     if (!success) {
         goto failure;
     }
 
     /* SIM initialization may take a significant amount, so an error is
-     * kind of expected. We should retry until we succeed */
+     * kind of expected. We should retry 10 times until we succeed or timeout. */
     retry_count = 0;
 
     while (true) {
@@ -437,24 +447,28 @@ void UbloxCellularInterface::set_credentials(const char *pin) {
 
 bool UbloxCellularInterface::nwk_registration()
 {
-   bool success = _at->send("AT+CGREG=2") //enable the packet switched data  registration unsolicited result code
-           && _at->recv("OK")
-           && _at->send("AT+CREG=%d", (dev_info->dev == DEV_LISA_C2) ? 1 : 2)//enable the network registration unsolicited result code
-           && _at->recv("OK");
-   if (!success) {
-       goto failure;
-   }
+    bool success = _at->send("AT+CGREG=2;" //enable the packet switched data  registration unsolicited result code
+                               "+CREG=%d", (dev_info->dev == DEV_LISA_C2) ? 1 : 2) //enable the network registration unsolicited result code
+                && _at->recv("OK");
+    if (!success) {
+        goto failure;
+    }
 
-   success = _at->send("AT+COPS=2") // clean the slate first, i.e., try unregistering if connected before
-            && _at->recv("OK")
-            && _at->send("AT+COPS=0") //initiate auto-registration
-            && _at->recv("OK")
-            && nwk_registration_status();
+    /* For Operator selection, we should have a longer timeout.
+     * According to Ublox AT Manual UBX-13002752, it could be 3 minutes */
+    _at->setTimeout(3*60*1000);
+    success = _at->send("AT+COPS=2;" // clean the slate first, i.e., try unregistering if connected before
+                          "+COPS=0")//initiate auto-registration
+           && _at->recv("OK")
+           && nwk_registration_status();
+
+    /* set the timeout back to 8 seconds */
+    _at->setTimeout(8*1000);
 
     return success;
 
 failure:
-    tr_error("Failed in network registration.");
+    tr_error("Network registration failed.");
     return false;
 }
 
@@ -468,28 +482,44 @@ nsapi_error_t UbloxCellularInterface::connect()
     PowerUpModem();
 
     bool success = preliminary_setup() // perform preliminary setup
-            &&  device_identity(&dev_info->dev) // setup device identity
+            && device_identity(&dev_info->dev) // setup device identity
             && nwk_registration() //perform network registration
-            && get_CCID(_at)
-            && get_IMSI(_at)
-            && get_IMEI(_at)
-            && get_MEID(_at)
-            && set_CMGF(_at)
-            && set_CNMI(_at)
-            && set_CGDCONT(_at)
-            && set_ATD(_at);
+            && get_CCID(_at) //get integrated circuit ID of the SIM
+            && get_IMSI(_at) //get international mobile subscriber information
+            && get_IMEI(_at) //get international mobile equipment identifier
+            && get_MEID(_at) //its same as IMEI
+            && set_CMGF(_at) //set message format for SMS
+            && set_CNMI(_at); //set new SMS indication
 
+    success = set_CGDCONT(_at) //sets up APN and IP protocol for external PDP context
+    && set_ATD(_at); //enter into Data mode with the modem
 
-    if(!success) return NSAPI_ERROR_NO_CONNECTION;
+    if (!success)
+        return NSAPI_ERROR_NO_CONNECTION;
 
+    /* Save RAM, discard AT Parser as we have entered Data mode. */
     delete _at;
     _at = NULL;
 
-   if (mbed_ppp_init(_fh) != NSAPI_ERROR_OK) {
-       return NSAPI_ERROR_NO_CONNECTION;
-   }
+    /* Initialize PPP */
+    if (mbed_ppp_init(_fh, ppp_connection_status_cb) != NSAPI_ERROR_OK) {
+        return NSAPI_ERROR_NO_CONNECTION;
+    }
+
+    /* Wait until PPP link is properly established/negotiated */
+    while (true) {
+        if (dev_info->ppp_status == CONNECTED) {
+            break;
+        }
+        wait_ms(1000);
+    }
 
     return NSAPI_ERROR_OK;
+}
+
+void UbloxCellularInterface::PowerOff()
+{
+    _at->send("AT+CPWROFF") && _at->recv("OK");
 }
 
 void UbloxCellularInterface::PowerUpModem()
@@ -497,8 +527,6 @@ void UbloxCellularInterface::PowerUpModem()
     c027_mdm_powerOn(_useUSB);
     wait(0.25);
 }
-
-
 
 NetworkStack *UbloxCellularInterface::get_stack()
 {
