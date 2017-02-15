@@ -52,7 +52,7 @@ static EventQueue *prepare_event_queue()
     // Shouldn't have to be making a private thread!
 
     // Only need to queue 1 event. new blows on failure.
-    event_queue = new EventQueue(1 * EVENTS_EVENT_SIZE, NULL);
+    event_queue = new EventQueue(2 * EVENTS_EVENT_SIZE, NULL);
     event_thread = new Thread(osPriorityNormal, 700);
 
     if (event_thread->start(callback(event_queue, &EventQueue::dispatch_forever)) != osOK) {
@@ -71,8 +71,10 @@ static u32_t ppp_output(ppp_pcb *pcb, u8_t *data, u32_t len, void *ctx)
     fhs.fh = stream;
     fhs.events = MBED_POLLOUT;
 
-    // File handle will be in non-blocking mode, because of read thread.
+    // LWIP expects us to block on write
+    // File handle will be in non-blocking mode, because of read events.
     // Therefore must use poll to achieve the necessary block for writing.
+
     uint32_t written = 0;
     while (written < len) {
         // Block forever until we're selected - don't care about reason we wake;
@@ -312,14 +314,6 @@ nsapi_error_t mbed_ppp_init(FileHandle *stream)
 NetworkStack *mbed_ppp_get_stack()
 {
     return nsapi_create_stack(&lwip_stack);
-}
-
-void ppp_bringup_test()
-{
-    BufferedSerial ser(USBRX, USBTX);
-
-    mbed_lwip_init();
-    ppp_lwip_if_init(&my_ppp_netif, &ser);
 }
 
 #endif /* LWIP_PPP_API */

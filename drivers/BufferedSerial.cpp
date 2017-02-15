@@ -19,8 +19,6 @@
 #include "drivers/BufferedSerial.h"
 #include "rtos.h"
 
-DigitalOut led1(LED1, 1);
-
 namespace mbed {
 
 BufferedSerial::BufferedSerial(PinName tx, PinName rx, int baud) :
@@ -68,6 +66,7 @@ ssize_t BufferedSerial::write(const void* buffer, size_t length)
 
     while (_txbuf.full()) {
         if (!_blocking) {
+            unlock();
             return -1; // WOULD_BLOCK probably
         }
         unlock();
@@ -86,7 +85,6 @@ ssize_t BufferedSerial::write(const void* buffer, size_t length)
         if (!_txbuf.empty()) {
             SerialBase::attach(callback(this, &BufferedSerial::TxIRQ), TxIrq);
             _tx_irq_enabled = true;
-            led1.write(0);
         }
     }
     core_util_critical_section_exit();
@@ -106,6 +104,7 @@ ssize_t BufferedSerial::read(void* buffer, size_t length)
 
     while (_rxbuf.empty()) {
         if (!_blocking) {
+            unlock();
             return -1; // WOULDBLOCK?
         }
         unlock();
@@ -187,7 +186,6 @@ void BufferedSerial::TxIRQ(void)
     if (_tx_irq_enabled && _txbuf.empty()) {
         SerialBase::attach(NULL, TxIrq);
         _tx_irq_enabled = false;
-        led1.write(1);
     }
 
     /* Report the File handler that data can be written to peripheral. */

@@ -72,6 +72,8 @@ public:
 
     virtual int fsync();
 
+    virtual int set_blocking(bool blocking) { _blocking = blocking; return 0; }
+
 private:
 
     /** Software serial buffers
