@@ -56,6 +56,27 @@ typedef enum {
 } connected_nwk_type;
 
 /**
+ * PPP connection status
+ * A data structure to keep track of PPP connection with the
+ * underlying external Network Stack.
+ */
+typedef enum {
+    NO_PPP_CONNECTION=-1,
+    CONNECTED=0,
+    INVALID_PARAMETERS,
+    INVALID_SESSION,
+    DEVICE_ERROR,
+    RESOURCE_ALLOC_ERROR,
+    USER_INTERRUPTION,
+    CONNECTION_LOST,
+    AUTHENTICATION_FAILED,
+    PROTOCOL_ERROR,
+    IDLE_TIMEOUT,
+    MAX_CONNECT_TIME_ERROR,
+    UNKNOWN
+} ppp_connection_status;
+
+/**
  * Network registration type
  * UBX-13002752 - AT Commands Manual (Section 7.4 COPS?)
  */
@@ -81,6 +102,7 @@ typedef struct {
     char imsi[15+1];    //!< International Mobile Station Identity
     char imei[15+1];    //!< International Mobile Equipment Identity
     char meid[18+1];    //!< Mobile Equipment IDentifier
+    ppp_connection_status ppp_status;
     connected_nwk_type connection;
     nwk_registration_type reg_type;
     nwk_active_profile_type act_profile;
