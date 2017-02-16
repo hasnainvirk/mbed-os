@@ -16,8 +16,9 @@
 #include <string.h>
 #include "mbed_trace.h"
 #include "UbloxCellularInterface.h"
-#include "lwip_stack.h"
 #include "C027_api.h"
+
+#include "ppp_lwip.h"
 
 
 #include "BufferedSerial.h"
@@ -181,7 +182,7 @@ static void CMT_URC(ATParser *at)
     tr_info("SMS:%s, %s", service_timestamp, sms);
 
 }
-
+/*
 static bool UCMT_URC(ATParser *at)
 {
     // our CMGF = 1, i.e., text mode. So we expect reponse in this format:
@@ -195,6 +196,19 @@ static bool UCMT_URC(ATParser *at)
     char from[20];
     char timestamp[15];
 
+}*/
+
+static bool set_CGDCONT(ATParser *at)
+{
+    bool success = at->send("AT+CGDCONT=1, \"IP\",\"internet\"") && at->recv("OK");
+
+    return success;
+}
+static bool set_ATD(ATParser *at)
+{
+    bool success = at->send("ATD*99***1#") && at->recv("CONNECT");
+
+    return success;
 }
 
 UbloxCellularInterface::UbloxCellularInterface(bool use_USB)
@@ -419,10 +433,19 @@ nsapi_error_t UbloxCellularInterface::connect()
             && get_IMEI(_at)
             && get_MEID(_at)
             && set_CMGF(_at)
-            && set_CNMI(_at);
+            && set_CNMI(_at)
+            && set_CGDCONT(_at)
+            && set_ATD(_at);
 
 
     if(!success) return NSAPI_ERROR_NO_CONNECTION;
+
+    delete _at;
+    _at = NULL;
+
+   if (mbed_ppp_init(_fh) != NSAPI_ERROR_OK) {
+       return NSAPI_ERROR_NO_CONNECTION;
+   }
 
     return NSAPI_ERROR_OK;
 }
@@ -437,7 +460,7 @@ void UbloxCellularInterface::PowerUpModem()
 
 NetworkStack *UbloxCellularInterface::get_stack()
 {
-    return nsapi_create_stack(&lwip_stack);
+    return mbed_ppp_get_stack();
 }
 
 

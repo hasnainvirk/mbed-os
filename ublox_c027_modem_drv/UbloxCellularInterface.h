@@ -19,7 +19,6 @@
 #include "mbed.h"
 #include "nsapi.h"
 #include "rtos.h"
-#include "lwip/netif.h"
 #include "FileHandle.h"
 #include "ATParser.h"
 
