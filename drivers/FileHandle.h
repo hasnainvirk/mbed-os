@@ -166,10 +166,7 @@ public:
      *
      *  @param func     Function to call on state change
      */
-   // void attach(mbed::Callback<void()> func, IrqType type=RxIrq);
-    virtual int attach(Callback<void(short events)> func) {
-        return -1;
-    }
+    int attach(Callback<void(short events)> func);
 
     virtual ~FileHandle() {};
 
@@ -187,6 +184,8 @@ protected:
 
         // Stub
     }
+
+    Callback<void(short events)> _callback;
 
     /** To be called by device when poll state changes - must be called for poll() to work */
     void _poll_change(short events);

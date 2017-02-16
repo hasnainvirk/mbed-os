@@ -16,6 +16,7 @@
 #include "FileHandle.h"
 #include "Timer.h"
 #include "rtos/Thread.h"
+#include "platform/critical.h"
 
 namespace mbed {
 
@@ -34,6 +35,19 @@ off_t FileHandle::flen()
     lseek(pos, SEEK_SET);
     unlock();
     return res;
+}
+
+int FileHandle::attach(Callback<void(short events)> func) {
+    core_util_critical_section_enter();
+    _callback = func;
+    if (_callback) {
+        short current_events = poll(0x7FFF);
+        if (current_events) {
+            _callback(current_events);
+        }
+    }
+    core_util_critical_section_exit();
+    return 0;
 }
 
 // timeout -1 forever, or milliseconds
@@ -79,6 +93,11 @@ int mbed_poll(PollFH fhs[], unsigned nfhs, int timeout)
 void FileHandle::_poll_change(short events)
 {
     // TODO, will depend on how we implement poll
+
+    // Also, do the user callback
+    if (_callback) {
+        _callback(events);
+    }
 }
 
 } // namespace mbed
