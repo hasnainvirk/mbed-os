@@ -56,7 +56,7 @@ static struct lwip_socket {
 } lwip_arena[MEMP_NUM_NETCONN];
 
 static bool lwip_inited = false;
-static bool lwip_connected = false;
+static bool lwip_connected = true;
 
 static struct lwip_socket *mbed_lwip_arena_alloc(void)
 {
