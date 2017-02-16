@@ -36,7 +36,11 @@ void c027_init(void) {
     // led should be off
     gpio_init_out_ex(&led,       LED,       0);
     
-    wait_ms(50); // when USB cable is inserted the interface chip issues 
+    // Can't use wait_ms() as RTOS isn't initialised yet
+    //wait_ms(50); // when USB cable is inserted the interface chip issues
+    // Here's the code from the non-RTOS version
+    uint32_t start = us_ticker_read();
+    while ((us_ticker_read() - start) < 50000);
 }
 
 void c027_mdm_powerOn(int usb) {
