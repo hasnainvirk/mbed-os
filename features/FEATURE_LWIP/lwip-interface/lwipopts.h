@@ -80,7 +80,7 @@
 #define DEFAULT_RAW_RECVMBOX_SIZE   8
 #define DEFAULT_ACCEPTMBOX_SIZE     8
 
-#ifdef LWIP_DEBUG
+#if defined(LWIP_DEBUG) || 1
 #define TCPIP_THREAD_STACKSIZE      1200*2
 #else
 #define TCPIP_THREAD_STACKSIZE      1200
@@ -255,6 +255,7 @@
 // Save RAM
 #define PAP_SUPPORT                 0
 #define VJ_SUPPORT                  0
+#define PRINTPKT_SUPPORT            1
 
 //Hate the config hassle.
 //#define LWIP_USE_EXTERNAL_MBEDTLS       1
