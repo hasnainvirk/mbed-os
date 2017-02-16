@@ -1,0 +1,8 @@
+{
+		"name": "ubox_c027_drv", 
+	    "target_overrides": {
+			"*": {
+				"target.features_add": ["COMMON_PAL"]
+			}
+		}
+}
