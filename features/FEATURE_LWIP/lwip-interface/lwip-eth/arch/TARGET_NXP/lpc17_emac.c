@@ -43,6 +43,8 @@
 #include "mbed_interface.h"
 #include <string.h>
 
+#if LWIP_ARP || LWIP_ETHERNET
+
 #ifndef LPC_EMAC_RMII
 #error LPC_EMAC_RMII is not defined!
 #endif
@@ -1058,5 +1060,7 @@ void eth_arch_disable_interrupts(void) {
 /**
  * @}
  */
+
+#endif /* LWIP_ARP || LWIP_ETHERNET */
 
 /* --------------------------------- End Of File ------------------------------ */
