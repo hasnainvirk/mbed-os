@@ -55,12 +55,8 @@ static struct lwip_socket {
     void *data;
 } lwip_arena[MEMP_NUM_NETCONN];
 
+static bool lwip_inited = false;
 static bool lwip_connected = false;
-
-static void mbed_lwip_arena_init(void)
-{
-    memset(lwip_arena, 0, sizeof lwip_arena);
-}
 
 static struct lwip_socket *mbed_lwip_arena_alloc(void)
 {
@@ -390,19 +386,28 @@ char *mbed_lwip_get_gateway(char *buf, nsapi_size_t buflen)
 #endif
 }
 
-nsapi_error_t mbed_lwip_init(emac_interface_t *emac)
+void mbed_lwip_init()
 {
     // Check if we've already brought up lwip
+    if (!lwip_inited) {
+        sys_sem_new(&lwip_tcpip_inited, 0);
+
+        tcpip_init(mbed_lwip_tcpip_init_irq, NULL);
+        sys_arch_sem_wait(&lwip_tcpip_inited, 0);
+
+        lwip_inited = true;
+    }
+}
+
+nsapi_error_t mbed_lwip_emac_init(emac_interface_t *emac)
+{
+    // Check if we've already set up netif
     if (!mbed_lwip_get_mac_address()) {
         // Set up network
         mbed_lwip_set_mac_address();
 
-        sys_sem_new(&lwip_tcpip_inited, 0);
         sys_sem_new(&lwip_netif_linked, 0);
         sys_sem_new(&lwip_netif_has_addr, 0);
-
-        tcpip_init(mbed_lwip_tcpip_init_irq, NULL);
-        sys_arch_sem_wait(&lwip_tcpip_inited, 0);
 
         memset(&lwip_netif, 0, sizeof lwip_netif);
         if (!netif_add(&lwip_netif,
@@ -433,12 +438,11 @@ nsapi_error_t mbed_lwip_bringup(bool dhcp, const char *ip, const char *netmask, 
         return NSAPI_ERROR_PARAMETER;
     }
 
-    if(mbed_lwip_init(NULL) != NSAPI_ERROR_OK) {
+    mbed_lwip_init();
+
+    if (mbed_lwip_emac_init(NULL) != NSAPI_ERROR_OK) {
         return NSAPI_ERROR_DEVICE_ERROR;
     }
-
-    // Zero out socket set
-    mbed_lwip_arena_init();
 
 #if LWIP_IPV6
     netif_create_ip6_linklocal_address(&lwip_netif, 1/*from MAC*/);
