@@ -108,7 +108,9 @@ static void mbed_lwip_socket_callback(struct netconn *nc, enum netconn_evt eh, u
 
 /* TCP/IP and Network Interface Initialisation */
 static struct netif lwip_netif;
+#if LWIP_DHCP
 static bool lwip_dhcp = false;
+#endif
 static char lwip_mac_address[NSAPI_MAC_SIZE];
 
 #if !LWIP_IPV4 || !LWIP_IPV6
@@ -488,7 +490,7 @@ nsapi_error_t mbed_lwip_bringup(bool dhcp, const char *ip, const char *netmask, 
 
     netif_set_up(&lwip_netif);
 
-#if LWIP_IPV4
+#if LWIP_DCHP
     // Connect to the network
     lwip_dhcp = dhcp;
 
@@ -538,7 +540,7 @@ nsapi_error_t mbed_lwip_bringdown(void)
         return NSAPI_ERROR_PARAMETER;
     }
 
-#if LWIP_IPV4
+#if LWIP_DHCP
     // Disconnect from the network
     if (lwip_dhcp) {
         dhcp_release(&lwip_netif);
@@ -701,7 +703,10 @@ static nsapi_error_t mbed_lwip_socket_bind(nsapi_stack_t *stack, nsapi_socket_t 
     struct lwip_socket *s = (struct lwip_socket *)handle;
     ip_addr_t ip_addr;
 
-    if ((s->conn->type == NETCONN_TCP && s->conn->pcb.tcp->local_port != 0) ||
+    if (
+#if LWIP_TCP
+        (s->conn->type == NETCONN_TCP && s->conn->pcb.tcp->local_port != 0) ||
+#endif
         (s->conn->type == NETCONN_UDP && s->conn->pcb.udp->local_port != 0)) {
         return NSAPI_ERROR_PARAMETER;
     }
@@ -850,6 +855,7 @@ static nsapi_error_t mbed_lwip_setsockopt(nsapi_stack_t *stack, nsapi_socket_t h
     struct lwip_socket *s = (struct lwip_socket *)handle;
 
     switch (optname) {
+#if LWIP_TCP
         case NSAPI_KEEPALIVE:
             if (optlen != sizeof(int) || s->conn->type != NETCONN_TCP) {
                 return NSAPI_ERROR_UNSUPPORTED;
@@ -873,6 +879,7 @@ static nsapi_error_t mbed_lwip_setsockopt(nsapi_stack_t *stack, nsapi_socket_t h
 
             s->conn->pcb.tcp->keep_intvl = *(int*)optval;
             return 0;
+#endif
 
         case NSAPI_REUSEADDR:
             if (optlen != sizeof(int)) {
@@ -880,9 +887,9 @@ static nsapi_error_t mbed_lwip_setsockopt(nsapi_stack_t *stack, nsapi_socket_t h
             }
 
             if (*(int *)optval) {
-                s->conn->pcb.tcp->so_options |= SOF_REUSEADDR;
+                ip_set_option(s->conn->pcb.ip, SOF_REUSEADDR);
             } else {
-                s->conn->pcb.tcp->so_options &= ~SOF_REUSEADDR;
+                ip_reset_option(s->conn->pcb.ip, SOF_REUSEADDR);
             }
             return 0;
 
