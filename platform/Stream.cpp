@@ -20,10 +20,7 @@ namespace mbed {
 Stream::Stream(const char *name) : FileLike(name), _file(NULL) {
     // No lock needed in constructor
     /* open ourselves */
-    char buf[12]; /* :0x12345678 + null byte */
-    std::sprintf(buf, ":%p", this);
-    _file = std::fopen(buf, "w+");
-    mbed_set_unbuffered_stream(_file);
+    _file = fdopen(this, "w+");
 }
 
 Stream::~Stream() {
