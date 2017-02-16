@@ -20,7 +20,6 @@
 
 #if DEVICE_SERIAL
 
-#include "Stream.h"
 #include "Callback.h"
 #include "serial_api.h"
 #include "mbed_toolchain.h"
