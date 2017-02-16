@@ -265,6 +265,7 @@
 // Save RAM
 #define PAP_SUPPORT                 0
 #define VJ_SUPPORT                  0
+#define PRINTPKT_SUPPORT            1
 
 //Hate the config hassle.
 //#define LWIP_USE_EXTERNAL_MBEDTLS       1
