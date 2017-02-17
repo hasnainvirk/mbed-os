@@ -34,9 +34,9 @@ extern "C" { // "pppos.h" is missing extern C
 #include "netif/ppp/pppapi.h"
 }
 
+#include "nsapi_ppp.h"
+#include "ppp_lwip.h"
 #include "lwip_stack.h"
-
-static void (*notify_ppp_link_status_cb)(int) = 0;
 
 namespace mbed {
 
@@ -50,6 +50,7 @@ static Thread *event_thread;
 static volatile bool event_queued;
 
 // Just one interface for now
+static FileHandle *my_stream;
 static ppp_pcb *my_ppp_pcb;
 
 static EventQueue *prepare_event_queue()
@@ -183,8 +184,6 @@ static void ppp_link_status(ppp_pcb *pcb, int err_code, void *ctx)
         }
     }
 
-    notify_ppp_link_status_cb(err_code);
-
 #if 0
     /*
      * This should be in the switch case, this is put outside of the switch
@@ -222,6 +221,9 @@ static void flush(FileHandle *stream)
     }
 }
 
+#if !PPP_INPROC_IRQ_SAFE
+#error "PPP_INPROC_IRQ_SAFE must be enabled"
+#endif
 static void ppp_input(FileHandle *stream)
 {
     // Allow new events from now, avoiding potential races around the read
@@ -230,7 +232,6 @@ static void ppp_input(FileHandle *stream)
     // Infinite loop, but we assume that we can read faster than the
     // serial, so we will fairly rapidly hit WOULDBLOCK.
     for (;;) {
-#if PPP_INPROC_IRQ_SAFE
         u8_t buffer[16];
         ssize_t len = stream->read(buffer, sizeof buffer);
         if (len <= 0) {
@@ -238,34 +239,6 @@ static void ppp_input(FileHandle *stream)
             break;
         }
         pppos_input(my_ppp_pcb, buffer, len);
-#else
-        // Code borrowed from internals of pppos_input_tcpip(), to avoid
-        // need for an extra buffer.
-        struct pbuf *p = pbuf_alloc(PBUF_RAW, PBUF_POOL_BUFSIZE, PBUF_POOL);
-        if (!p) {
-            // Out of memory, so leave routine for now.
-            // Flush to make sure we will be woken again
-            flush(stream);
-            break;
-        }
-
-        ssize_t len = stream->read(p->payload, p->len);
-        if (len <= 0) {
-            // error - (XXX should do something if not WOULDBLOCK)
-            pbuf_free(p);
-            break;
-        }
-
-        //printf("< %ld\n", (long) len);
-
-        p->len = p->tot_len = len;
-
-        err_t err = tcpip_inpkt(p, ppp_netif(my_ppp_pcb), pppos_input_sys);
-        if (err != ERR_OK) {
-            pbuf_free(p);
-            // If it doesn't accept it, I don't care - keep going
-        }
-#endif
     }
 }
 
@@ -278,50 +251,43 @@ static void stream_cb(FileHandle *stream, short events) {
     }
 }
 
-err_t ppp_lwip_if_init(struct netif *netif, FileHandle *stream)
+extern "C" err_t ppp_lwip_connect()
+{
+   return ppp_connect(my_ppp_pcb, 0);
+}
+
+extern "C" nsapi_error_t ppp_lwip_if_init(struct netif *netif)
 {
     if (!prepare_event_queue()) {
-        return ERR_MEM;
+        return NSAPI_ERROR_NO_MEMORY;
     }
 
     if (!my_ppp_pcb) {
         my_ppp_pcb = pppos_create(netif,
-                               ppp_output, ppp_link_status, stream);
+                               ppp_output, ppp_link_status, my_stream);
     }
 
     if (!my_ppp_pcb) {
-        return ERR_IF;
+        return NSAPI_ERROR_DEVICE_ERROR;
     }
-
-#if LWIP_IPV6_AUTOCONFIG
-    /* IPv6 address autoconfiguration not enabled by default */
-    netif->ip6_autoconfig_enabled = 1;
-#endif /* LWIP_IPV6_AUTOCONFIG */
 
 #if LWIP_IPV4
     ppp_set_usepeerdns(my_ppp_pcb, true);
 #endif
 
-    ppp_set_default(my_ppp_pcb);
-
-    stream->attach(callback(stream_cb, stream));
-    stream->set_blocking(false);
-
-    return ppp_connect(my_ppp_pcb, 0);
-}
-
-static struct netif my_ppp_netif;
-
-nsapi_error_t mbed_ppp_init(FileHandle *stream, void (*link_status)(int))
-{
-    notify_ppp_link_status_cb = link_status;
-    mbed_lwip_init();
-    ppp_lwip_if_init(&my_ppp_netif, stream);
+    my_stream->attach(callback(stream_cb, my_stream));
+    my_stream->set_blocking(false);
 
     return NSAPI_ERROR_OK;
 }
 
-NetworkStack *mbed_ppp_get_stack()
+nsapi_error_t nsapi_ppp_init(FileHandle *stream)
+{
+    my_stream = stream;
+    return mbed_lwip_bringup(false, true, NULL, NULL, NULL);
+}
+
+NetworkStack *nsapi_ppp_get_stack()
 {
     return nsapi_create_stack(&lwip_stack);
 }

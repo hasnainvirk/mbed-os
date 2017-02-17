@@ -15,8 +15,9 @@
 
 #include <string.h>
 #include "UbloxCellularInterface.h"
+
+#include "nsapi_ppp.h"
 #include "C027_api.h"
-#include "ppp_lwip.h"
 #include "BufferedSerial.h"
 #if defined(FEATURE_COMMON_PAL)
 #include "mbed_trace.h"
@@ -501,20 +502,10 @@ nsapi_error_t UbloxCellularInterface::connect()
     delete _at;
     _at = NULL;
 
-    /* Initialize PPP */
-    if (mbed_ppp_init(_fh, ppp_connection_status_cb) != NSAPI_ERROR_OK) {
-        return NSAPI_ERROR_NO_CONNECTION;
-    }
-
-    /* Wait until PPP link is properly established/negotiated */
-    while (true) {
-        if (dev_info->ppp_status == CONNECTED) {
-            break;
-        }
-        wait_ms(1000);
-    }
-
-    return NSAPI_ERROR_OK;
+    /* Initialize PPP
+     * mbed_ppp_init() is a blocking call, it will block until
+     * connected, or timeout after 30 seconds*/
+    return nsapi_ppp_init(_fh);
 }
 
 void UbloxCellularInterface::PowerOff()
@@ -530,9 +521,6 @@ void UbloxCellularInterface::PowerUpModem()
 
 NetworkStack *UbloxCellularInterface::get_stack()
 {
-    return mbed_ppp_get_stack();
+    return nsapi_ppp_get_stack();
 }
-
-
-
 
