@@ -31,17 +31,6 @@
 #define BAUD_RATE   115200
 
 static void ppp_connection_status_cb(int status);
-static Mutex mtx;
-static void lock()
-{
-    mtx.lock();
-}
-
-static void unlock()
-{
-    mtx.unlock();
-}
-
 device_info *dev_info;
 
 static void parser_abort(ATParser *at)
@@ -55,7 +44,6 @@ static void parser_abort(ATParser *at)
  * So we should apply proper mutex unlocking and locking */
 static void ppp_connection_status_cb(int status)
 {
-    unlock();
     switch (status) {
         case CONNECTED:
             tr_info("PPP link established");
@@ -76,7 +64,7 @@ static void ppp_connection_status_cb(int status)
         default:
             break;
     }
-    lock();
+
     dev_info->ppp_status = static_cast<ppp_connection_status>(status);
 }
 
