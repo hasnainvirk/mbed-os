@@ -45,15 +45,29 @@ typedef enum {
  * UBX-13001820 - AT Commands Example Application Note (Section 4.1.4.5)
  */
 typedef enum {
-   NO_CONNECTION=0,
-   GPRS=1,
-   EDGE=2,
-   WCDMA=3,
+   GSM=0,
+   COMPACT_GSM=1,
+   UTRAN=2,
+   EDGE=3,
    HSDPA=4,
    HSUPA=5,
    HSDPA_HSUPA=6,
    LTE=7
-} connected_nwk_type;
+} radio_access_nwk_type;
+
+/**
+ * Network registration status (CGREG Usage)
+ * UBX-13001820 - AT Commands Example Application Note (Section 18.27.3)
+ */
+typedef enum {
+    NOT_REGISTERED_NOT_SEARCHING=0,
+    REGISTERED=1,
+    NOT_REGISTERED_SEARCHING=2,
+    REGISTRATION_DENIED=3,
+    UNKNOWN_COVERAGE=4,
+    REGISTERED_ROAMING=5,
+    EMERGENCY_SERVICES_ONLY=6
+} nwk_registration_status;
 
 /**
  * PPP connection status
@@ -76,25 +90,6 @@ typedef enum {
     UNKNOWN
 } ppp_connection_status;
 
-/**
- * Network registration type
- * UBX-13002752 - AT Commands Manual (Section 7.4 COPS?)
- */
-typedef enum {
-    AUTOMATIC=0,
-    MANUAL,
-    DISABLED
-} nwk_registration_type;
-
-/**
- * Current active network profile
- * UBX-13002752 - AT Commands Manual (Section 7.4 COPS?)
- */
-typedef enum {
-    ACT_GSM=0,
-    ACT_UTRAN=2,
-    ACT_LTE=7
-} nwk_active_profile_type;
 
 typedef struct {
     device_type dev;
@@ -102,10 +97,10 @@ typedef struct {
     char imsi[15+1];    //!< International Mobile Station Identity
     char imei[15+1];    //!< International Mobile Equipment Identity
     char meid[18+1];    //!< Mobile Equipment IDentifier
+    int flags;
     ppp_connection_status ppp_status;
-    connected_nwk_type connection;
-    nwk_registration_type reg_type;
-    nwk_active_profile_type act_profile;
+    radio_access_nwk_type rat;
+    nwk_registration_status reg_status;
 } device_info;
 
 
