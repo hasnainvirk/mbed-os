@@ -35,6 +35,7 @@
 
 #include "FileHandle.h"
 #include "SerialBase.h"
+#include "InterruptIn.h"
 #include "PlatformMutex.h"
 #include "serial_api.h"
 #include "CircularBuffer.h"
@@ -48,6 +49,7 @@ public:
      *  @param baud The baud rate of the serial port (optional, defaults to MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE)
      */
     BufferedSerial(PinName tx, PinName rx, int baud = MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE);
+    virtual ~BufferedSerial();
 
     /** Equivalent to POSIX poll(). Derived from FileHandle.
      *  Provides a mechanism to multiplex input/output over a set of file handles.
@@ -74,6 +76,8 @@ public:
 
     virtual int set_blocking(bool blocking) { _blocking = blocking; return 0; }
 
+    void set_data_carrier_detect(PinName DCD_pin, bool active_high=false);
+
 private:
 
     /** Software serial buffers
@@ -87,8 +91,9 @@ private:
 
     bool _blocking;
     bool _tx_irq_enabled;
+    InterruptIn *_dcd;
 
-
+    bool HUP() const;
 
     /** ISRs for serial
      *  Routines to handle interrupts on serial pins.
@@ -98,7 +103,7 @@ private:
     void TxIRQ(void);
     void RxIRQ(void);
 
-
+    void DCD_IRQ(void);
 };
 } //namespace mbed
 
