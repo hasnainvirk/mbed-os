@@ -260,6 +260,9 @@ static bool set_ATD(ATParser *at)
 
 UbloxCellularInterface::UbloxCellularInterface(bool use_USB)
 {
+    _at = NULL;
+    _dcd = NULL;
+
     _useUSB = use_USB;
     if (!use_USB) {
          //Set up File Handle
@@ -398,9 +401,13 @@ bool UbloxCellularInterface::preliminary_setup()
 
     _at->setTimeout(8000);
 
+    /*For more details regarding DCD and DTR circuitry, please refer to LISA-U2 System integration manual
+     * and Ublox AT commands manual*/
     success = _at->send("ATE0;" //turn off modem echoing
                         "+CMEE=2;" //turn on verbose responses
-                        "+IPR=115200") //setup baud rate
+                        "+IPR=115200;" //setup baud rate
+                        "&C1;"  //set DCD circuit(109), changes in accordance with the carrier detect status
+                        "&D0") //set DTR circuit, we ignore the state change of DTR
            && _at->recv("OK");
 
     if (!success) {
