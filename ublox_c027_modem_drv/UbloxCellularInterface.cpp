@@ -31,7 +31,8 @@
 #define BAUD_RATE   115200
 
 static void ppp_connection_status_cb(int status);
-device_info *dev_info;
+static bool initialized = false;
+static device_info *dev_info;
 
 static void parser_abort(ATParser *at)
 {
@@ -46,8 +47,9 @@ static void ppp_connection_status_cb(int status)
 {
     switch (status) {
         case CONNECTED:
-            tr_info("PPP link established");
-            break;
+           // tr_info("PPP link up");
+            dev_info->ppp_status = CONNECTED;
+            return;
         case INVALID_PARAMETERS:
         case INVALID_SESSION:
         case DEVICE_ERROR:
@@ -59,79 +61,77 @@ static void ppp_connection_status_cb(int status)
         case IDLE_TIMEOUT:
         case MAX_CONNECT_TIME_ERROR:
         case UNKNOWN:
-            tr_error("PPP link couldn't be established");
+          //  tr_error("PPP link down");
+               dev_info->ppp_status = NO_PPP_CONNECTION;
             break;
         default:
             break;
     }
 
-    dev_info->ppp_status = static_cast<ppp_connection_status>(status);
+}
+
+void set_nwk_reg_status(unsigned int status)
+{
+
+    switch (status) {
+        case NOT_REGISTERED_NOT_SEARCHING:
+        case NOT_REGISTERED_SEARCHING:
+            tr_debug("Not registered to any network");
+            break;
+        case REGISTERED:
+        case REGISTERED_ROAMING:
+            tr_debug("Registered to network");
+            break;
+        case REGISTRATION_DENIED:
+            tr_debug("Network registration denied");
+            break;
+        case UNKNOWN_COVERAGE:
+            tr_debug("Out of GERAN/UTRAN coverage");
+            break;
+        case EMERGENCY_SERVICES_ONLY:
+            tr_debug("Limited access. Emergency use only.");
+            break;
+        default:
+            tr_debug("Unknown network registration status. %u", status);
+            break;
+    }
+
+    dev_info->reg_status = static_cast<nwk_registration_status>(status);
 }
 
 
-void set_nwk_status(unsigned int AcTStatus)
+void set_RAT(unsigned int AcTStatus)
 {
 
     switch (AcTStatus) {
-        case NO_CONNECTION:
-            tr_debug("No network available.");
+        case GSM:
+        case COMPACT_GSM:
+            tr_debug("Connected to RAT. GSM");
             break;
-        case GPRS:
-            tr_debug("Connected. GPRS");
+        case UTRAN:
+            tr_debug("Connected to RAT. UTRAN");
             break;
         case EDGE:
-            tr_debug("Connected. EDGE");
-            break;
-        case WCDMA:
-            tr_debug("Connected. UMTS");
+            tr_debug("Connected to RAT. EDGE");
             break;
         case HSDPA:
-            tr_debug("Connected. HSDPA");
+            tr_debug("Connected to RAT. HSDPA");
             break;
         case HSUPA:
-            tr_debug("Connected. HSPA");
+            tr_debug("Connected to RAT. HSPA");
             break;
         case HSDPA_HSUPA:
-            tr_debug("Connected. HDPA/HSPA");
+            tr_debug("Connected to RAT. HDPA/HSPA");
             break;
         case LTE:
-            tr_debug("Connected. LTE");
+            tr_debug("Connected to RAT. LTE");
             break;
         default:
-            tr_debug("Unknown network status. %u", AcTStatus);
+            tr_debug("Unknown RAT. %u", AcTStatus);
             break;
     }
 
-    dev_info->connection = static_cast<connected_nwk_type>(AcTStatus);
-}
-
-static void CREG_URC(ATParser *at)
-{
-    // AT Command Manual UBX-13002752, section 7.10
-    //+CREG: <stat>[,<lac>,<ci>[,<AcTStatus>]]
-    unsigned int state;
-    char lac[10];
-    char ci[10];
-    unsigned int AcTStatus;
-    bool success = at->recv(": %u,\"%9[^\"]\",\"%9[^\"]\",%u", &state, lac, ci, &AcTStatus);
-    if (success) {
-        set_nwk_status(AcTStatus);
-    }
-}
-
-static void CGREG_URC(ATParser *at)
-{
-    // AT Command Manual UBX-13002752, section 18.27
-    //+CGREG: <stat>[,<lac>,<ci>[,<AcT>,<rac>]]
-    unsigned int state;
-    char lac[10];
-    char ci[10];
-    char rac[10];
-    unsigned int AcTStatus;
-    bool success = at->recv(": %u,\"%9[^\"]\",\"%9[^\"]\",%u,\"%9[^\"]\"", &state, lac, ci, &AcTStatus, rac);
-    if (success) {
-        set_nwk_status(AcTStatus);
-    }
+    dev_info->rat = static_cast<radio_access_nwk_type>(AcTStatus);
 }
 
 static bool get_CCID(ATParser *at)
@@ -269,27 +269,13 @@ UbloxCellularInterface::UbloxCellularInterface(bool use_USB)
         return;
     }
 
-    /* Setup AT Parser */
-    _at = new ATParser(*_fh);
-
-    /* Error cases, out of band handling  */
-    _at->oob("ERROR", callback(parser_abort, _at));
-    _at->oob("+CME ERROR", callback(parser_abort, _at));
-    _at->oob("+CMS ERROR", callback(parser_abort, _at));
-
-    /* URCs, handled out of band */
-    _at->oob("+CREG", callback(CREG_URC, _at));
-    _at->oob("+CGREG", callback(CGREG_URC, _at));
-    _at->oob("+CMT", callback(CMT_URC, _at));
-    _at->oob("+CMTI", callback(CMTI_URC, _at));
-
     /* setup dummy default pin */
     char dummy_pin[] = "1234";
     _pin = dummy_pin;
 
     dev_info = new device_info;
     dev_info->dev = DEV_TYPE_NONE;
-    dev_info->connection = NO_CONNECTION;
+    dev_info->reg_status = NOT_REGISTERED_NOT_SEARCHING;
     dev_info->ppp_status = NO_PPP_CONNECTION;
 
 }
@@ -298,33 +284,62 @@ UbloxCellularInterface::~UbloxCellularInterface()
 {
     delete _fh;
     delete _at;
+    delete _dcd;
     delete dev_info;
 
 }
+
 
 bool UbloxCellularInterface::nwk_registration_status()
 {
     /* Check current network status */
     bool success = false;
 
-    // +COPS: <mode>[,<format>,<oper>[,<AcT>]]
-    char operator_name[20];
-    unsigned int active_network_mode;
-    success = _at->send("AT+COPS?")
-            && _at->recv("+COPS: %*u,%*u,\"%19[^\"]\",%u\nOK\n", operator_name, &active_network_mode);
+    /* We should be checking network status using CGREG, please note that
+     * we have disabled any URC's by choice, i.e, CGREG=0 so we are expecting
+     * +CGREG: <n>,<stat> where n will always be zero and stat would be nwk_registration_status*/
 
-    if(!success) {
+    // +COPS: <mode>[,<format>,<oper>[,<AcT>]]
+    char str[35];
+    int retcode;
+    unsigned int AcTStatus;
+    unsigned int reg_status;
+
+
+
+    success = _at->send("AT+CGREG?")
+            && _at->recv("+CGREG: %34[^\n]\n", str);
+
+    if (!success) {
         goto failure;
     }
 
-    if (active_network_mode > 0) {
-        success = true;
+    retcode = sscanf(str, "%*u,%u", &reg_status);
+
+    if (retcode >= 1) {
+        set_nwk_reg_status(reg_status);
+    } else {
+        goto failure;
+    }
+
+    success = _at->send("AT+COPS?")
+            && _at->recv("+COPS: %34[^\n]\n", str);
+
+    if(!success) {
+         goto failure;
+     }
+
+    retcode = sscanf(str, "%*u,%*u,\"%*[^\"]\",%u", &AcTStatus);
+
+    if (retcode >= 1) {
+        set_RAT(AcTStatus);
+    } else {
+        goto failure;
     }
 
     return success;
 
 failure:
-    tr_error("Couldn't get network registration status");
     return false;
 }
 
@@ -436,8 +451,8 @@ void UbloxCellularInterface::set_credentials(const char *pin) {
 
 bool UbloxCellularInterface::nwk_registration()
 {
-    bool success = _at->send("AT+CGREG=2;" //enable the packet switched data  registration unsolicited result code
-                               "+CREG=%d", (dev_info->dev == DEV_LISA_C2) ? 1 : 2) //enable the network registration unsolicited result code
+    bool success = _at->send("AT+CGREG=0;" //enable the packet switched data  registration unsolicited result code
+                               "+CREG=0") //enable the network registration unsolicited result code
                 && _at->recv("OK");
     if (!success) {
         goto failure;
@@ -461,39 +476,134 @@ failure:
     return false;
 }
 
-nsapi_error_t UbloxCellularInterface::disconnect()
+void UbloxCellularInterface::setup_at_parser()
 {
-    return NSAPI_ERROR_OK;
+    if (_at) {
+        return;
+    }
+
+    _at = new ATParser(*_fh);
+
+    /* Error cases, out of band handling  */
+    _at->oob("ERROR", callback(parser_abort, _at));
+    _at->oob("+CME ERROR", callback(parser_abort, _at));
+    _at->oob("+CMS ERROR", callback(parser_abort, _at));
+
+    /* URCs, handled out of band */
+    _at->oob("+CMT", callback(CMT_URC, _at));
+    _at->oob("+CMTI", callback(CMTI_URC, _at));
+}
+
+void UbloxCellularInterface::shutdown_at_parser()
+{
+    delete _at;
+    _at = NULL;
 }
 
 nsapi_error_t UbloxCellularInterface::connect()
 {
-    PowerUpModem();
+    bool success;
+    bool did_init = false;
 
-    bool success = preliminary_setup() // perform preliminary setup
-            && device_identity(&dev_info->dev) // setup device identity
-            && nwk_registration() //perform network registration
-            && get_CCID(_at) //get integrated circuit ID of the SIM
-            && get_IMSI(_at) //get international mobile subscriber information
-            && get_IMEI(_at) //get international mobile equipment identifier
-            && get_MEID(_at) //its same as IMEI
-            && set_CMGF(_at) //set message format for SMS
-            && set_CNMI(_at); //set new SMS indication
+    if (dev_info->ppp_status != NO_PPP_CONNECTION) {
+        return NSAPI_ERROR_IS_CONNECTED;
+    }
 
-    success = set_CGDCONT(_at) //sets up APN and IP protocol for external PDP context
-    && set_ATD(_at); //enter into Data mode with the modem
 
-    if (!success)
+    if(!_useUSB) {
+        BufferedSerial *serial = static_cast<BufferedSerial *>(_fh);
+        serial->set_data_carrier_detect(NC);
+    }
+
+    setup_at_parser();
+
+retry_init:
+    if (!initialized) {
+        PowerUpModem();
+        success = preliminary_setup() // perform preliminary setup
+                && device_identity(&dev_info->dev) // setup device identity
+                && nwk_registration() //perform network registration
+                && get_CCID(_at) //get integrated circuit ID of the SIM
+                && get_IMSI(_at) //get international mobile subscriber information
+                && get_IMEI(_at) //get international mobile equipment identifier
+                && get_MEID(_at) //its same as IMEI
+                && set_CMGF(_at) //set message format for SMS
+                && set_CNMI(_at) //set new SMS indication
+                && set_CGDCONT(_at); //sets up APN and IP protocol for external PDP context
+
+        if (!success) {
+            shutdown_at_parser();
+            return NSAPI_ERROR_NO_CONNECTION;
+        }
+
+        initialized = true;
+        did_init = true;
+    } else {
+        _at->recv("NO CARRIER");
+/*        while (_dcd->read() != 1) {
+              wait_ms(100);
+          }*/
+        success = _at->send("AT") && _at->recv("OK");
+    }
+#if 0
+    else {
+        //reconnection, enter data mode
+        _at = new ATParser(*_fh);
+        DigitalIn DCD_pin(MDMDCD);
+        if (DCD_pin.read() == 0) {
+            /* in command mode */
+            if (!set_ATD(_at)) {
+                return NSAPI_ERROR_DEVICE_ERROR;
+            }
+        } else {
+            tr_debug("Already in data mode.");
+        }
+    }
+#endif
+
+    success = set_ATD(_at); //enter into Data mode with the modem
+    if (!success) {
+        PowerOff();
+        initialized = false;
+
+        if (!did_init) {
+            goto retry_init;
+        }
+
+        shutdown_at_parser();
+
         return NSAPI_ERROR_NO_CONNECTION;
+    }
 
     /* Save RAM, discard AT Parser as we have entered Data mode. */
-    delete _at;
-    _at = NULL;
+    shutdown_at_parser();
+/*
+    if (!_dcd) {
+        _dcd = new InterruptIn(MDMDCD);
+        _dcd->rise(callback(nsapi_ppp_carrier_lost, _fh));
+    }*/
+
+    if(!_useUSB) {
+        BufferedSerial *serial = static_cast<BufferedSerial *>(_fh);
+        serial->set_data_carrier_detect(MDMDCD);
+    }
 
     /* Initialize PPP
      * mbed_ppp_init() is a blocking call, it will block until
      * connected, or timeout after 30 seconds*/
-    return nsapi_ppp_init(_fh);
+
+    return nsapi_ppp_connect(_fh, ppp_connection_status_cb);
+}
+
+nsapi_error_t UbloxCellularInterface::disconnect()
+{
+    nsapi_error_t ret = nsapi_ppp_disconnect(_fh);
+    if (ret == NSAPI_ERROR_OK) {
+        dev_info->ppp_status = NO_PPP_CONNECTION;
+        return NSAPI_ERROR_OK;
+    }
+
+    return ret;
 }
 
 void UbloxCellularInterface::PowerOff()
