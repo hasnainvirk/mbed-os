@@ -20,6 +20,7 @@
 #include "nsapi.h"
 #include "rtos.h"
 #include "FileHandle.h"
+#include "InterruptIn.h"
 #include "ATParser.h"
 
 // Forward declaration
@@ -109,11 +110,15 @@ class UbloxCellularInterface : public CellularInterface {
 private:
     FileHandle *_fh;
     ATParser *_at;
+    InterruptIn *_dcd;
     bool _useUSB;
     const char *_pin;
+    void setup_at_parser();
+    void shutdown_at_parser();
     bool preliminary_setup();
     bool device_identity(device_type *dev);
     bool nwk_registration();
+    bool nwk_registration_status();
     int8_t gsm_initialization();
     int8_t umts_initialization();
     int8_t cdma_initialization();
@@ -128,7 +133,6 @@ public:
     UbloxCellularInterface(bool use_USB);
     ~UbloxCellularInterface();
     void set_credentials(const char *pin);
-    bool nwk_registration_status();
     virtual nsapi_error_t connect();
     virtual nsapi_error_t disconnect();
     void PowerOff();

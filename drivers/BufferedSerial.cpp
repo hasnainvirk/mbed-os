@@ -24,10 +24,32 @@ namespace mbed {
 BufferedSerial::BufferedSerial(PinName tx, PinName rx, int baud) :
         SerialBase(tx, rx, baud),
         _blocking(true),
-        _tx_irq_enabled(false)
+        _tx_irq_enabled(false),
+        _dcd(NULL)
 {
     /* Attatch IRQ routines to the serial device. */
     SerialBase::attach(callback(this, &BufferedSerial::RxIRQ), RxIrq);
+}
+
+BufferedSerial::~BufferedSerial()
+{
+    delete _dcd;
+}
+
+void BufferedSerial::DCD_IRQ()
+{
+    _poll_change(MBED_POLLHUP);
+}
+
+void BufferedSerial::set_data_carrier_detect(PinName DCD_pin)
+{
+    delete _dcd;
+    _dcd = NULL;
+
+    if (DCD_pin != NC) {
+        _dcd = new InterruptIn(DCD_pin);
+        _dcd->rise(callback(this, &BufferedSerial::DCD_IRQ));
+    }
 }
 
 int BufferedSerial::close()
@@ -122,16 +144,26 @@ ssize_t BufferedSerial::read(void* buffer, size_t length)
     return data_read;
 }
 
+bool BufferedSerial::HUP() const
+{
+    return _dcd && _dcd->read() != 0;
+}
+
 short BufferedSerial::poll(short events) const {
 
     short revents = 0;
     /* Check the Circular Buffer if space available for writing out */
-    if (!_txbuf.full()) {
-        revents |= MBED_POLLOUT;
-    }
+
 
     if (!_rxbuf.empty()) {
         revents |= MBED_POLLIN;
+    }
+
+    /* POLLHUP and POLLOUT are mutually exclusive */
+    if (HUP()) {
+        revents |= MBED_POLLHUP;
+    } else if (!_txbuf.full()) {
+        revents |= MBED_POLLOUT;
     }
 
     /*TODO Handle other event types */
@@ -189,7 +221,7 @@ void BufferedSerial::TxIRQ(void)
     }
 
     /* Report the File handler that data can be written to peripheral. */
-    if (was_full && !_txbuf.full()) {
+    if (was_full && !_txbuf.full() && !HUP()) {
         _poll_change(MBED_POLLOUT);
     }
 }
