@@ -13,9 +13,7 @@
  * limitations under the License.
  */
 
-#include <string.h>
 #include "UbloxCellularInterface.h"
-
 #include "nsapi_ppp.h"
 #include "C027_api.h"
 #include "BufferedSerial.h"
