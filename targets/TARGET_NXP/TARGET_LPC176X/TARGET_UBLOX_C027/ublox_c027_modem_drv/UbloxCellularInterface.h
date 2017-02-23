@@ -14,6 +14,7 @@
  */
 
 #ifndef _UBLOX_CELLULAR_INTERFACE_
+
 #define _UBLOX_CELLULAR_INTERFACE_
 
 #include "mbed.h"

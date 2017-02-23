@@ -1,3 +1,5 @@
+#include "ATParser.h"
+
 /* Copyright (c) 2017 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +20,6 @@
  *
  */
 
-#include "ATParser.h"
 #include "mbed_debug.h"
 
 #define LF 10
