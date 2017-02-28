@@ -584,7 +584,7 @@ static err_t ppp_netif_output(struct netif *netif, struct pbuf *pb, u16_t protoc
 #endif /* CCP_SUPPORT */
 
 #if PRINTPKT_SUPPORT
-  ppp_dump_packet("sent", (unsigned char *)pb->payload, pb->len);
+  ppp_dump_packet(pcb, "sent", (unsigned char *)pb->payload, pb->len);
   //printf("sent %d, proto %x\n", pb->tot_len, protocol);
 #endif /* PRINTPKT_SUPPORT */
 
