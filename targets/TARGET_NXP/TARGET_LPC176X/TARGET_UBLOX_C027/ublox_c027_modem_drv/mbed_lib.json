@@ -1,5 +1,8 @@
 {
-		"name": "ubox_c027_drv", 
+		"name": "ublox-c027", 
+			"config": {
+				"apn-lookup": false
+			},
 	    "target_overrides": {
 			"*": {
 				"target.features_add": ["COMMON_PAL"]
