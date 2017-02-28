@@ -50,7 +50,9 @@ public:
     MBED_DEPRECATED_SINCE("mbed-os-5.4",
         "The mbed 2 filesystem classes have been superseeded by the FileSystem api, "
         "Replaced by File")
-    FileHandle() {}
+    FileHandle(){}
+
+    virtual ~FileHandle(){}
 
     /** Write the contents of a buffer to the file
      *
@@ -128,8 +130,6 @@ public:
         return -1;
     }
 
-    virtual ~FileHandle(){};
-
     /** Check for poll event flags
      * The input parameter can be used or ignored - the could always return all events,
      * or could check just the events listed in events.
@@ -168,7 +168,6 @@ public:
      */
     int attach(Callback<void(short events)> func);
 
-    virtual ~FileHandle() {};
 
 protected:
 

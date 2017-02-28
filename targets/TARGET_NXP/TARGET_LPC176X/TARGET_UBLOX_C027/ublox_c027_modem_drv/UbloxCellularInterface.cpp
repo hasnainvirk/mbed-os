@@ -17,6 +17,9 @@
 #include "nsapi_ppp.h"
 #include "C027_api.h"
 #include "BufferedSerial.h"
+#if MBED_CONF_UBLOX_C027_APN_LOOKUP
+#include "APN_db.h"
+#endif //MBED_CONF_UBLOX_C027_APN_LOOKUP
 #if defined(FEATURE_COMMON_PAL)
 #include "mbed_trace.h"
 #define TRACE_GROUP "UCID"
@@ -28,8 +31,9 @@
 
 #define BAUD_RATE   115200
 
-static void ppp_connection_status_cb(int status);
+static void ppp_connection_down_cb(void);
 static bool initialized = false;
+static bool set_credentials_api_used = false;
 static device_info *dev_info;
 
 static void parser_abort(ATParser *at)
@@ -41,31 +45,9 @@ static void parser_abort(ATParser *at)
  * the underlying network stack when the status of PPP link changes.
  * This method could be called from a separate data pumping thread.
  * So we should apply proper mutex unlocking and locking */
-static void ppp_connection_status_cb(int status)
+static void ppp_connection_down_cb(void)
 {
-    switch (status) {
-        case CONNECTED:
-           // tr_info("PPP link up");
-            dev_info->ppp_status = CONNECTED;
-            return;
-        case INVALID_PARAMETERS:
-        case INVALID_SESSION:
-        case DEVICE_ERROR:
-        case RESOURCE_ALLOC_ERROR:
-        case USER_INTERRUPTION:
-        case CONNECTION_LOST:
-        case AUTHENTICATION_FAILED:
-        case PROTOCOL_ERROR:
-        case IDLE_TIMEOUT:
-        case MAX_CONNECT_TIME_ERROR:
-        case UNKNOWN:
-          //  tr_error("PPP link down");
-               dev_info->ppp_status = NO_PPP_CONNECTION;
-            break;
-        default:
-            break;
-    }
-
+    dev_info->ppp_connection_up = false;
 }
 
 void set_nwk_reg_status(unsigned int status)
@@ -237,18 +219,6 @@ static bool set_UDCONF(ATParser *at)
     return success;
 }
 
-static bool set_CGDCONT(ATParser *at)
-{
-    bool success = at->send("AT+CGDCONT=1,\"IPV4V6\",\"internet\"") && at->recv("OK");
-
-    if (!success) {
-        /* Try enabling IPv6 (for next boot). We don't care if this command fails - find out if IPv6 works next time.  */
-        set_UDCONF(at);
-        success = at->send("AT+CGDCONT=1,\"IP\",\"internet\"") && at->recv("OK");
-    }
-
-    return success;
-}
 static bool set_ATD(ATParser *at)
 {
     bool success = at->send("ATD*99***1#") && at->recv("CONNECT");
@@ -260,6 +230,9 @@ UbloxCellularInterface::UbloxCellularInterface(bool use_USB)
 {
     _at = NULL;
     _dcd = NULL;
+    _apn = "internet";
+    _uname = NULL;
+    _pwd = NULL;
 
     _useUSB = use_USB;
     if (!use_USB) {
@@ -277,7 +250,7 @@ UbloxCellularInterface::UbloxCellularInterface(bool use_USB)
     dev_info = new device_info;
     dev_info->dev = DEV_TYPE_NONE;
     dev_info->reg_status = NOT_REGISTERED_NOT_SEARCHING;
-    dev_info->ppp_status = NO_PPP_CONNECTION;
+    dev_info->ppp_connection_up = false;
 
 }
 
@@ -287,7 +260,6 @@ UbloxCellularInterface::~UbloxCellularInterface()
     delete _at;
     delete _dcd;
     delete dev_info;
-
 }
 
 
@@ -344,6 +316,11 @@ failure:
     return false;
 }
 
+bool UbloxCellularInterface::isConnected()
+{
+    return dev_info->ppp_connection_up;
+}
+
 bool UbloxCellularInterface::device_identity(device_type *dev)
 {
     char buf[20];
@@ -371,54 +348,16 @@ bool UbloxCellularInterface::device_identity(device_type *dev)
     return success;
 }
 
-bool UbloxCellularInterface::preliminary_setup()
+nsapi_error_t UbloxCellularInterface::initialize_sim_card()
 {
-    bool success = false;
-    // The power on call does everything except press the "power" button - this is that
-    // button. Pulse low briefly to turn it on, hold it low for 1 second to turn it off.
-    DigitalOut pwrOn(MDMPWRON, 1);
-
-    int retry_count = 0;
-    while(true) {
-        pwrOn = 0;
-        wait_ms(150);
-        pwrOn = 1;
-        wait_ms(100);
-        /* Modem tends to spit out noise during power up - don't confuse the parser */
-        _at->flush();
-        _at->setTimeout(1000);
-        if(_at->send("AT") && _at->recv("OK")) {
-            tr_debug("cmd success.");
-            break;
-        }
-
-        if (++retry_count > 10) {
-            goto failure;
-        }
-    }
-
-    _at->setTimeout(8000);
-
-    /*For more details regarding DCD and DTR circuitry, please refer to LISA-U2 System integration manual
-     * and Ublox AT commands manual*/
-    success = _at->send("ATE0;" //turn off modem echoing
-                        "+CMEE=2;" //turn on verbose responses
-                        "+IPR=115200;" //setup baud rate
-                        "&C1;"  //set DCD circuit(109), changes in accordance with the carrier detect status
-                        "&D0") //set DTR circuit, we ignore the state change of DTR
-           && _at->recv("OK");
-
-    if (!success) {
-        goto failure;
-    }
-
     /* SIM initialization may take a significant amount, so an error is
      * kind of expected. We should retry 10 times until we succeed or timeout. */
-    retry_count = 0;
+    int retry_count = 0;
 
     while (true) {
         char pinstr[16];
-        if (_at->send("AT+CPIN?") && _at->recv("+CPIN: %15[^\n]\nOK\n", pinstr)) {
+        if (_at->send("AT+CPIN?")
+                && _at->recv("+CPIN: %15[^\n]\nOK\n", pinstr)) {
             if (strcmp(pinstr, "SIM PIN") == 0) {
                 if (!_at->send("AT+CPIN=\"%s\"", _pin) || !_at->recv("OK")) {
                     goto failure;
@@ -440,18 +379,54 @@ bool UbloxCellularInterface::preliminary_setup()
     }
 
     tr_debug("Pin set");
-
-    /* If everything alright, return from here with success*/
-    return success=true;
+    return NSAPI_ERROR_OK;
 
 failure:
-    tr_error("Preliminary modem setup failed.");
-    return false;
+    tr_error("Setting up SIM pin code failed.");
+    return NSAPI_ERROR_AUTH_FAILURE;
 }
 
-void UbloxCellularInterface::set_credentials(const char *pin) {
+void UbloxCellularInterface::set_SIM_pin(const char *pin) {
     /* overwrite the default pin by user provided pin */
     _pin = pin;
+}
+
+nsapi_error_t UbloxCellularInterface::setup_context_and_credentials()
+{
+    bool success;
+
+    if (!_apn) {
+        return NSAPI_ERROR_PARAMETER;
+    }
+
+    if (_uname && _pwd) {
+        success = _at->send("AT+CGDCONT=1,\"IPV4V6\",\"CHAP:%s\"", _apn)
+               && _at->recv("OK");
+    } else {
+        success = _at->send("AT+CGDCONT=1,\"IPV4V6\",\"%s\"", _apn)
+               && _at->recv("OK");
+    }
+
+    if (!success) {
+        /* Try enabling IPv6 (for next boot). We don't care if this command fails - find out if IPv6 works next time.  */
+        set_UDCONF(_at);
+
+        success = _at->send("AT+CGDCONT=1,\"IP\",\"%s\"", _apn)
+               && _at->recv("OK");
+    }
+
+    return success ? NSAPI_ERROR_OK : NSAPI_ERROR_PARAMETER;
+
+}
+
+void  UbloxCellularInterface::set_credentials(const char *apn, const char *uname,
+                                                               const char *pwd)
+{
+    _apn = apn;
+    _uname = uname;
+    _pwd = pwd;
+    set_credentials_api_used = true;
+
 }
 
 bool UbloxCellularInterface::nwk_registration()
@@ -505,36 +480,97 @@ void UbloxCellularInterface::shutdown_at_parser()
     _at = NULL;
 }
 
+nsapi_error_t UbloxCellularInterface::connect(const char *sim_pin, const char *apn, const char *uname, const char *pwd)
+{
+    if (!sim_pin) {
+        return NSAPI_ERROR_PARAMETER;
+    }
+
+    if (apn) {
+        _apn = apn;
+    }
+
+    if (uname && pwd) {
+        _uname = uname;
+        _pwd = pwd;
+    } else {
+        _uname = NULL;
+        _pwd = NULL;
+    }
+
+    _pin = sim_pin;
+
+    return connect();
+}
+
 nsapi_error_t UbloxCellularInterface::connect()
 {
+    nsapi_error_t retcode;
     bool success;
     bool did_init = false;
 
-    if (dev_info->ppp_status != NO_PPP_CONNECTION) {
+    if (dev_info->ppp_connection_up) {
         return NSAPI_ERROR_IS_CONNECTED;
     }
 
-
-    if(!_useUSB) {
-        BufferedSerial *serial = static_cast<BufferedSerial *>(_fh);
-        serial->set_data_carrier_detect(NC);
-    }
-
-    setup_at_parser();
+#if MBED_CONF_UBLOX_C027_APN_LOOKUP && !set_credentials_api_used
+    const char *apn_config;
+    do {
+#endif
 
 retry_init:
+
+    /* setup AT parser */
+    setup_at_parser();
+
     if (!initialized) {
-        PowerUpModem();
-        success = preliminary_setup() // perform preliminary setup
-                && device_identity(&dev_info->dev) // setup device identity
-                && nwk_registration() //perform network registration
+
+        /* If we are using serial interface, we want to make sure that DCD line is
+         * not connected as long as we are using ATParser.
+         * As soon as we get into data mode, we would like to attach an interrupt line
+         * to DCD line.
+         * Here, we detach the line */
+        if (!_useUSB) {
+            BufferedSerial *serial = static_cast<BufferedSerial *>(_fh);
+            serial->set_data_carrier_detect(NC);
+        }
+
+        if (!PowerUpModem()) {
+            return NSAPI_ERROR_DEVICE_ERROR;
+        }
+
+        retcode = initialize_sim_card();
+        if (retcode != NSAPI_ERROR_OK) {
+            return retcode;
+        }
+
+        success = device_identity(&dev_info->dev) // setup device identity
+        && nwk_registration() //perform network registration
                 && get_CCID(_at) //get integrated circuit ID of the SIM
                 && get_IMSI(_at) //get international mobile subscriber information
                 && get_IMEI(_at) //get international mobile equipment identifier
                 && get_MEID(_at) //its same as IMEI
                 && set_CMGF(_at) //set message format for SMS
-                && set_CNMI(_at) //set new SMS indication
-                && set_CGDCONT(_at); //sets up APN and IP protocol for external PDP context
+                && set_CNMI(_at); //set new SMS indication
+
+#if MBED_CONF_UBLOX_C027_APN_LOOKUP && !set_credentials_api_used
+        apn_config = apnconfig(dev_info->imsi);
+        if (apn_config) {
+            _apn    = _APN_GET(apn_config);
+            _uname  = _APN_GET(apn_config);
+            _pwd    = _APN_GET(apn_config);
+        }
+
+        _apn    = _apn     ?  _apn    : NULL;
+        _uname  = _uname   ?  _uname  : NULL;
+        _pwd    = _pwd     ?  _pwd    : NULL;
+#endif
+
+        //sets up APN and IP protocol for external PDP context
+        retcode = setup_context_and_credentials();
+        if (retcode != NSAPI_ERROR_OK) {
+            return retcode;
+        }
 
         if (!success) {
             shutdown_at_parser();
@@ -544,50 +580,37 @@ retry_init:
         initialized = true;
         did_init = true;
     } else {
+        /* If we were already initialized, we expect to receive NO_CARRIER response
+         * from the modem as we were kicked out of Data mode */
         _at->recv("NO CARRIER");
-/*        while (_dcd->read() != 1) {
-              wait_ms(100);
-          }*/
         success = _at->send("AT") && _at->recv("OK");
     }
-#if 0
-    else {
-        //reconnection, enter data mode
-        _at = new ATParser(*_fh);
-        DigitalIn DCD_pin(MDMDCD);
-        if (DCD_pin.read() == 0) {
-            /* in command mode */
-            if (!set_ATD(_at)) {
-                return NSAPI_ERROR_DEVICE_ERROR;
-            }
-        } else {
-            tr_debug("Already in data mode.");
-        }
-    }
-#endif
 
+    /* Attempt to enter data mode */
     success = set_ATD(_at); //enter into Data mode with the modem
     if (!success) {
-        PowerOff();
+        PowerDownModem();
         initialized = false;
 
+        /* if we were previously initialized , i.e., not in this particular attempt,
+         * we want to re-initialize */
         if (!did_init) {
             goto retry_init;
         }
 
+        /* shutdown AT parser before notifying application of the failure */
         shutdown_at_parser();
 
         return NSAPI_ERROR_NO_CONNECTION;
     }
 
-    /* Save RAM, discard AT Parser as we have entered Data mode. */
+    /* This is the success case.
+     * Save RAM, discard AT Parser as we have entered Data mode. */
     shutdown_at_parser();
-/*
-    if (!_dcd) {
-        _dcd = new InterruptIn(MDMDCD);
-        _dcd->rise(callback(nsapi_ppp_carrier_lost, _fh));
-    }*/
 
+    /* Here we would like to attach an interrupt line to DCD pin
+     * We cast back the serial interface from the file handle and set
+     * the DCD line. */
     if(!_useUSB) {
         BufferedSerial *serial = static_cast<BufferedSerial *>(_fh);
         serial->set_data_carrier_detect(MDMDCD);
@@ -596,32 +619,102 @@ retry_init:
     /* Initialize PPP
      * mbed_ppp_init() is a blocking call, it will block until
      * connected, or timeout after 30 seconds*/
+    retcode = nsapi_ppp_connect(_fh, ppp_connection_down_cb, _uname, _pwd);
+    if (retcode == NSAPI_ERROR_OK) {
+        dev_info->ppp_connection_up = true;
+    }
 
-    return nsapi_ppp_connect(_fh, ppp_connection_status_cb);
+#if MBED_CONF_UBLOX_C027_APN_LOOKUP && !set_credentials_api_used
+    } while(!dev_info->ppp_connection_up && apn_config && *apn_config);
+#endif
+     return retcode;
 }
 
+/**
+ * User initiated disconnect
+ *
+ * Disconnects from PPP connection only and brings down the underlying network
+ * interface
+ */
 nsapi_error_t UbloxCellularInterface::disconnect()
 {
     nsapi_error_t ret = nsapi_ppp_disconnect(_fh);
     if (ret == NSAPI_ERROR_OK) {
-        dev_info->ppp_status = NO_PPP_CONNECTION;
+        dev_info->ppp_connection_up = false;
         return NSAPI_ERROR_OK;
     }
 
     return ret;
 }
 
-void UbloxCellularInterface::PowerOff()
+/** Power down modem
+ *  Uses AT command to do it */
+void UbloxCellularInterface::PowerDownModem()
 {
     _at->send("AT+CPWROFF") && _at->recv("OK");
 }
 
-void UbloxCellularInterface::PowerUpModem()
+/**
+ * Powers up the modem
+ *
+ * Enables the GPIO lines to the modem and then wriggles the power line in short pulses.
+ */
+bool UbloxCellularInterface::PowerUpModem()
 {
+    /* Initialize GPIO lines */
     c027_mdm_powerOn(_useUSB);
     wait(0.25);
+
+    bool success = false;
+       // The power on call does everything except press the "power" button - this is that
+       // button. Pulse low briefly to turn it on, hold it low for 1 second to turn it off.
+       DigitalOut pwrOn(MDMPWRON, 1);
+
+       int retry_count = 0;
+       while(true) {
+           pwrOn = 0;
+           wait_ms(150);
+           pwrOn = 1;
+           wait_ms(100);
+           /* Modem tends to spit out noise during power up - don't confuse the parser */
+           _at->flush();
+           _at->setTimeout(1000);
+           if(_at->send("AT") && _at->recv("OK")) {
+               tr_debug("cmd success.");
+               break;
+           }
+
+           if (++retry_count > 10) {
+               goto failure;
+           }
+       }
+
+       _at->setTimeout(8000);
+
+       /*For more details regarding DCD and DTR circuitry, please refer to LISA-U2 System integration manual
+        * and Ublox AT commands manual*/
+       success = _at->send("ATE0;" //turn off modem echoing
+                           "+CMEE=2;" //turn on verbose responses
+                           "+IPR=115200;" //setup baud rate
+                           "&C1;"  //set DCD circuit(109), changes in accordance with the carrier detect status
+                           "&D0") //set DTR circuit, we ignore the state change of DTR
+              && _at->recv("OK");
+
+       if (!success) {
+           goto failure;
+       }
+
+       /* If everything alright, return from here with success*/
+       return success;
+
+failure:
+       tr_error("Preliminary modem setup failed.");
+       return false;
 }
 
+/**
+ * Get a pointer to the underlying network stack
+ */
 NetworkStack *UbloxCellularInterface::get_stack()
 {
     return nsapi_ppp_get_stack();

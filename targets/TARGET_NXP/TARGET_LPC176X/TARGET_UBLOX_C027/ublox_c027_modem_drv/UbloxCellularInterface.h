@@ -71,28 +71,6 @@ typedef enum {
     EMERGENCY_SERVICES_ONLY=6
 } nwk_registration_status;
 
-/**
- * PPP connection status
- * A data structure to keep track of PPP connection with the
- * underlying external Network Stack.
- */
-typedef enum {
-    NO_PPP_CONNECTION=-1,
-    CONNECTED=0,
-    INVALID_PARAMETERS,
-    INVALID_SESSION,
-    DEVICE_ERROR,
-    RESOURCE_ALLOC_ERROR,
-    USER_INTERRUPTION,
-    CONNECTION_LOST,
-    AUTHENTICATION_FAILED,
-    PROTOCOL_ERROR,
-    IDLE_TIMEOUT,
-    MAX_CONNECT_TIME_ERROR,
-    UNKNOWN
-} ppp_connection_status;
-
-
 typedef struct {
     device_type dev;
     char ccid[20+1];    //!< Integrated Circuit Card ID
@@ -100,13 +78,88 @@ typedef struct {
     char imei[15+1];    //!< International Mobile Equipment Identity
     char meid[18+1];    //!< Mobile Equipment IDentifier
     int flags;
-    ppp_connection_status ppp_status;
+    bool ppp_connection_up;
     radio_access_nwk_type rat;
     nwk_registration_status reg_status;
 } device_info;
 
-
+/** UbloxCellularInterface class
+ *
+ *  This interface serves as the controller/driver for the UBLOX
+ *  C027 cellular IoT series.
+ */
 class UbloxCellularInterface : public CellularInterface {
+
+public:
+    UbloxCellularInterface(bool use_USB);
+    ~UbloxCellularInterface();
+
+    /** Set the Cellular network credentials
+     *
+     *  Please check documentation of connect() for default behaviour of APN settings.
+     *
+     *  @param apn      Access point name
+     *  @param uname    optionally, Username
+     *  @param pwd      optionally, password
+     */
+    virtual void set_credentials(const char *apn, const char *uname = 0,
+                                                  const char *pwd = 0);
+
+    /** Set the pin code for SIM card
+     *
+     *  @param sim_pin      PIN for the SIM card
+     */
+    virtual void  set_SIM_pin(const char *sim_pin);
+
+    /** Start the interface
+     *
+     *  Attempts to connect to a Cellular network.
+     *
+     *  @param sim_pin     PIN for the SIM card
+     *  @param apn         optionally, access point name
+     *  @param uname       optionally, Username
+     *  @param pwd         optionally, password
+     *  @return            NSAPI_ERROR_OK on success, or negative error code on failure
+     */
+    virtual nsapi_error_t connect(const char *sim_pin, const char *apn = 0,
+                                  const char *uname = 0, const char *pwd = 0);
+
+
+    /** Attempt to connect to the Cellular network
+     *
+     *  Brings up the network interface. Connects to the Cellular Radio
+     *  network and then brings up the underlying network stack to be used
+     *  by the cellular modem over PPP interface.
+     *
+     *  If the SIM requires a PIN, and it is not set/invalid, NSAPI_ERROR_AUTH_ERROR is returned.
+     *  For APN setup, default behaviour is to use 'internet' as APN string and assuming no authentication
+     *  is required, i.e., username and password are no set. Optionally, a database lookup can be requested
+     *  by turning on the APN database lookup feature. In order to do so, add 'MBED_CONF_UBLOX_C027_APN_LOOKUP'
+     *  in your mbed_app.json. APN database is by no means exhaustive. It contains a short list of some public
+     *  APNs with publicly available usernames and passwords (if required) in some particular countries only.
+     *  Lookup is done using IMSI (International mobile subscriber identifier).
+     *  Please note that even if 'MBED_CONF_UBLOX_C027_APN_LOOKUP' config option is set, 'set_credentials()' api still
+     *  gets the precedence. If the aforementioned API is not used and the config option is set but no match is found in
+     *  the lookup table then the driver tries to resort to default APN settings.
+     *
+     *  Preferred method is to setup APN using 'set_credentials()' API.
+
+     *  @return         0 on success, negative error code on failure
+     */
+    virtual nsapi_error_t connect();
+
+    /** Attempt to disconnect from the network
+     *
+     *  Brings down the network interface. Shuts down the PPP interface
+     *  of the underlying network stack. Does not bring down the Radio network
+     *
+     *  @return         0 on success, negative error code on failure
+     */
+    virtual nsapi_error_t disconnect();
+
+    bool isConnected();
+
+
 
 private:
     FileHandle *_fh;
@@ -114,29 +167,18 @@ private:
     InterruptIn *_dcd;
     bool _useUSB;
     const char *_pin;
+    const char *_apn;
+    const char *_uname;
+    const char *_pwd;
     void setup_at_parser();
     void shutdown_at_parser();
-    bool preliminary_setup();
+    nsapi_error_t initialize_sim_card();
+    nsapi_error_t setup_context_and_credentials();
     bool device_identity(device_type *dev);
     bool nwk_registration();
     bool nwk_registration_status();
-    int8_t gsm_initialization();
-    int8_t umts_initialization();
-    int8_t cdma_initialization();
-
-
-    /* Previous implementation of ublox does not seem to bother with powering up the modems
-     * Probably they are already powered up.
-     * There is some code though to setup powergating pin but only for USB.*/
-    void PowerUpModem();
-
-public:
-    UbloxCellularInterface(bool use_USB);
-    ~UbloxCellularInterface();
-    void set_credentials(const char *pin);
-    virtual nsapi_error_t connect();
-    virtual nsapi_error_t disconnect();
-    void PowerOff();
+    bool PowerUpModem();
+    void PowerDownModem();
 
 protected:
     /** Provide access to the underlying stack

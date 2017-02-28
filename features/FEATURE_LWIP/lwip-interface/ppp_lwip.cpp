@@ -52,9 +52,11 @@ static volatile bool event_queued;
 // Just one interface for now
 static FileHandle *my_stream;
 static ppp_pcb *my_ppp_pcb;
-static bool ppp_link_up;
+static bool ppp_link_up = false;
+static const char *login;
+static const char *pwd;
 static sys_sem_t ppp_close_sem;
-static void (*notify_ppp_link_status)(int) = 0;
+static void (*notify_ppp_link_down)(void) = 0;
 
 static EventQueue *prepare_event_queue()
 {
@@ -193,14 +195,19 @@ static void ppp_link_status(ppp_pcb *pcb, int err_code, void *ctx)
 
     if (err_code == PPPERR_NONE) {
         ppp_link_up = true;
-    } else {
-        if (ppp_link_up) {
-            ppp_link_up = false;
-            sys_sem_signal(&ppp_close_sem);
-        }
+        /* suppress generating a callback event for connection up
+         * Because connect() call is blocking, why wait for a callback */
+        return;
     }
 
-    notify_ppp_link_status(err_code);
+    /* If some error happened, we need to properly shutdown the PPP interface  */
+    if (ppp_link_up) {
+        ppp_link_up = false;
+        sys_sem_signal(&ppp_close_sem);
+    }
+
+    /* Alright, PPP interface is down, we need to notify upper layer */
+    notify_ppp_link_down();
 }
 
 #if !PPP_INPROC_IRQ_SAFE
@@ -240,13 +247,6 @@ static void ppp_input()
     }
 }
 
-/*static void ppp_carrier_lost()
-{
-    if (my_stream) {
-        ppp_close(my_ppp_pcb, 1);
-    }
-}*/
-
 static void stream_cb(short events) {
     if (my_stream && !event_queued) {
         event_queued = true;
@@ -258,6 +258,10 @@ static void stream_cb(short events) {
 
 extern "C" err_t ppp_lwip_connect()
 {
+#if PPP_AUTH_SUPPORT
+   ppp_set_auth(my_ppp_pcb, PPPAUTHTYPE_ANY, login, pwd);
+#endif //PPP_AUTH_SUPPORT
+
    err_t ret = ppp_connect(my_ppp_pcb, 0);
    // lwIP's ppp.txt says input must not be called until after connect
    if (ret == ERR_OK) {
@@ -307,14 +311,17 @@ extern "C" nsapi_error_t ppp_lwip_if_init(struct netif *netif)
     return NSAPI_ERROR_OK;
 }
 
-nsapi_error_t nsapi_ppp_connect(FileHandle *stream, void (*ppp_link_status_cb)(int))
+nsapi_error_t nsapi_ppp_connect(FileHandle *stream, void (*ppp_link_down_cb)(void), const char *uname, const char *password)
 {
     if (my_stream) {
         return NSAPI_ERROR_PARAMETER;
     }
     my_stream = stream;
     stream->set_blocking(false);
-    notify_ppp_link_status = ppp_link_status_cb;
+    notify_ppp_link_down = ppp_link_down_cb;
+    login = uname;
+    pwd = password;
+
     // mustn't start calling input until after connect -
     // attach deferred until ppp_lwip_connect, called from mbed_lwip_bringup
     return mbed_lwip_bringup(false, true, NULL, NULL, NULL);
@@ -325,13 +332,6 @@ nsapi_error_t nsapi_ppp_disconnect(FileHandle *stream)
 {
     return mbed_lwip_bringdown(true);
 }
-
-/*void nsapi_ppp_carrier_lost(FileHandle *stream)
-{
-    if (stream == my_stream) {
-        event_queue->call(callback(ppp_carrier_lost));
-    }
-}*/
 
 NetworkStack *nsapi_ppp_get_stack()
 {
