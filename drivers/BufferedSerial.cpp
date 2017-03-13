@@ -205,7 +205,6 @@ void BufferedSerial::RxIRQ(void)
         char data = SerialBase::_base_getc();
         if (!_rxbuf.full()) {
             _rxbuf.push(data);
-        } else {
             /* Drop - can we report in some way? */
         }
     }
