@@ -65,7 +65,11 @@
 #error "Either IPv4 or IPv6 must be preferred."
 #endif
 
-//#define LWIP_DEBUG
+#if defined(MBED_CONF_LWIP_DEBUG_ENABLED)
+#define LWIP_DEBUG                  MBED_CONF_LWIP_DEBUG_ENABLED
+#else
+#define LWIP_DEBUG                  0
+#endif
 
 #if NO_SYS == 0
 #include "cmsis_os.h"
@@ -80,18 +84,18 @@
 #define DEFAULT_RAW_RECVMBOX_SIZE   8
 #define DEFAULT_ACCEPTMBOX_SIZE     8
 
-#if defined(LWIP_DEBUG) || 1
-#define TCPIP_THREAD_STACKSIZE      1200*2
+#if LWIP_DEBUG
+#define TCPIP_THREAD_STACKSIZE      1200*3
 #else
-#define TCPIP_THREAD_STACKSIZE      1200
+#define TCPIP_THREAD_STACKSIZE      1200*2
 #endif
 
 #define TCPIP_THREAD_PRIO           (osPriorityNormal)
 
-#ifdef LWIP_DEBUG
-#define DEFAULT_THREAD_STACKSIZE    512*2
+#if LWIP_DEBUG
+#define DEFAULT_THREAD_STACKSIZE    512*3
 #else
-#define DEFAULT_THREAD_STACKSIZE    512
+#define DEFAULT_THREAD_STACKSIZE    512*2
 #endif
 
 #define MEMP_NUM_SYS_TIMEOUT        16
@@ -217,21 +221,23 @@
 #define AUTOIP_DEBUG                LWIP_DBG_OFF
 #define DNS_DEBUG                   LWIP_DBG_OFF
 #define IP6_DEBUG                   LWIP_DBG_OFF
-
+#if MBED_CONF_LWIP_ENABLE_PPP_TRACE
+#define PPP_DEBUG                   LWIP_DBG_ON
+#else
 #define PPP_DEBUG                   LWIP_DBG_OFF
+#endif //MBED_CONF_LWIP_ENABLE_PPP_TRACE
 #define ETHARP_DEBUG                LWIP_DBG_OFF
 #define UDP_LPC_EMAC                LWIP_DBG_OFF
 
-#ifdef LWIP_DEBUG
+#if LWIP_DEBUG
 #define MEMP_OVERFLOW_CHECK         1
 #define MEMP_SANITY_CHECK           1
+#define LWIP_DBG_TYPES_ON           LWIP_DBG_ON
+#define LWIP_DBG_MIN_LEVEL          LWIP_DBG_LEVEL_ALL
 #else
 #define LWIP_NOASSERT               1
 #define LWIP_STATS                  0
 #endif
-
-#define LWIP_DBG_TYPES_ON           LWIP_DBG_ON
-#define LWIP_DBG_MIN_LEVEL          LWIP_DBG_LEVEL_ALL
 
 #define LWIP_PLATFORM_BYTESWAP      1
 
@@ -253,7 +259,7 @@
 // Save RAM
 #define PAP_SUPPORT                 0
 #define VJ_SUPPORT                  0
-#define PRINTPKT_SUPPORT            1
+#define PRINTPKT_SUPPORT            0
 
 //Hate the config hassle.
 //#define LWIP_USE_EXTERNAL_MBEDTLS       1

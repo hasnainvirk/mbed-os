@@ -614,8 +614,7 @@ static void ppp_logit(int level, const char *fmt, va_list args) {
 static void ppp_log_write(int level, char *buf) {
     LWIP_UNUSED_ARG(level); /* necessary if PPPDEBUG is defined to an empty function */
     LWIP_UNUSED_ARG(buf);
-    //PPPDEBUG(level, ("%s\n", buf) );
-    puts(buf);
+    PPPDEBUG(level, ("%s\n", buf) );
 #if 0
     if (log_to_fd >= 0 && (level != LOG_DEBUG || debug)) {
 	int n = strlen(buf);
