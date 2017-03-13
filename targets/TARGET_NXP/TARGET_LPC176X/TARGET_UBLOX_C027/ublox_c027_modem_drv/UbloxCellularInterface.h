@@ -14,7 +14,6 @@
  */
 
 #ifndef _UBLOX_CELLULAR_INTERFACE_
-
 #define _UBLOX_CELLULAR_INTERFACE_
 
 #include "mbed.h"
@@ -91,7 +90,7 @@ typedef struct {
 class UbloxCellularInterface : public CellularInterface {
 
 public:
-    UbloxCellularInterface(bool use_USB);
+    UbloxCellularInterface(bool use_USB, bool debugOn=0);
     ~UbloxCellularInterface();
 
     /** Set the Cellular network credentials
@@ -157,7 +156,59 @@ public:
      */
     virtual nsapi_error_t disconnect();
 
-    bool isConnected();
+    /** Adds or removes a SIM facility lock
+         *
+         * Can be used to enable or disable SIM pin check at device startup.
+         * This API sets up flags for the driver which would either enable or disable
+         * SIM pin checking depending upon the user provided argument while establishing
+         * connection. It doesn't do anything immediately other than setting up flags.
+         *
+         * @param unlock     can be set to true if the SIM pin check is supposed to be disabled
+         *                   and vice versa.
+         */
+        void add_remove_sim_pin_check(bool unlock);
+
+        /** Change the pin for the SIM card
+         *
+         * Provide the new pin for your SIM card with this API. Old pin code will be assumed to
+         * be set using set_SIM_pin() API. This API have no immediate effect. While establishing
+         * connection, driver will change the SIM pin for the next boot.
+         *
+         * @param new_pin     new pin to be used in string format
+         */
+        void change_sim_pin(const char *new_pin);
+
+        /** Check if the connection is currently established or not
+         *
+         * @return true/false   If the cellular module have successfully acquired a carrier and is
+         *                      connected to an external packet data network using PPP, isConnected()
+         *                      API returns true and false otherwise.
+         */
+        virtual bool isConnected();
+
+        /** Get the local IP address
+         *
+         *  @return         Null-terminated representation of the local IP address
+         *                  or null if no IP address has been recieved
+         */
+        virtual const char *get_ip_address();
+
+        /** Get the local network mask
+         *
+         *  @return         Null-terminated representation of the local network mask
+         *                  or null if no network mask has been recieved
+         */
+        virtual const char *get_netmask();
+
+        /** Get the local gateways
+         *
+         *  @return         Null-terminated representation of the local gateway
+         *                  or null if no network mask has been recieved
+         */
+        virtual const char *get_gateway();
+
+        void connection_lost_notification_cb(void (*fptr)(nsapi_error_t));
+
 
 
 
@@ -166,10 +217,12 @@ private:
     ATParser *_at;
     InterruptIn *_dcd;
     bool _useUSB;
+    const char *_new_pin;
     const char *_pin;
     const char *_apn;
     const char *_uname;
     const char *_pwd;
+    bool _debug_trace_on;
     void setup_at_parser();
     void shutdown_at_parser();
     nsapi_error_t initialize_sim_card();
@@ -186,6 +239,10 @@ protected:
      *  @return The underlying network stack
      */
     virtual NetworkStack *get_stack();
+
+    char _ip_address[NSAPI_IPv4_SIZE];
+    char _netmask[NSAPI_IPv4_SIZE];
+    char _gateway[NSAPI_IPv4_SIZE];
 
 };
 

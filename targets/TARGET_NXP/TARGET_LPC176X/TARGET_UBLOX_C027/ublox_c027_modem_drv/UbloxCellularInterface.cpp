@@ -30,10 +30,16 @@
 #endif //defined(FEATURE_COMMON_PAL)
 
 #define BAUD_RATE   115200
+#define AT_PARSER_BUFFER_SIZE   256 //bytes
+#define AT_PARSER_TIMEOUT       8*1000 //miliseconds
 
-static void ppp_connection_down_cb(void);
+static void ppp_connection_down_cb(nsapi_error_t err);
+static void (*callback_fptr)(nsapi_error_t);
+
 static bool initialized = false;
 static bool set_credentials_api_used = false;
+static bool set_sim_pin_check_request = false;
+static bool change_pin = false;
 static device_info *dev_info;
 
 static void parser_abort(ATParser *at)
@@ -41,15 +47,14 @@ static void parser_abort(ATParser *at)
     at->abort();
 }
 
-/* A callback function set in mbed_ppp_init() and will be called by
- * the underlying network stack when the status of PPP link changes.
- * This method could be called from a separate data pumping thread.
- * So we should apply proper mutex unlocking and locking */
-static void ppp_connection_down_cb(void)
+static void ppp_connection_down_cb(nsapi_error_t err)
 {
     dev_info->ppp_connection_up = false;
-}
 
+    if (callback_fptr) {
+        callback_fptr(err);
+    }
+}
 void set_nwk_reg_status(unsigned int status)
 {
 
@@ -226,13 +231,52 @@ static bool set_ATD(ATParser *at)
     return success;
 }
 
-UbloxCellularInterface::UbloxCellularInterface(bool use_USB)
+/**
+ * Enables or disables SIM pin check lock
+ */
+static nsapi_error_t do_add_remove_sim_pin_check(ATParser *at, const char *pin)
 {
+    bool success;
+    if (set_sim_pin_check_request) {
+        /* use the SIM unlocked always */
+        success = at->send("AT+CLCK=\"SC\",0,\"%s\"", pin) && at->recv("OK");
+    } else {
+        /* use the SIM locked always */
+        success = at->send("AT+CLCK=\"SC\",1,\"%s\"",pin) && at->recv("OK");
+    }
+
+    if (success) return NSAPI_ERROR_OK;
+
+    return NSAPI_ERROR_AUTH_FAILURE;
+}
+
+/**
+ * Change the pin code for the SIM card
+ */
+static nsapi_error_t do_change_sim_pin(ATParser *at, const char *old_pin, const char *new_pin)
+{
+    /* changes the SIM pin */
+       bool success = at->send("AT+CPWD=\"SC\",\"%s\",\"%s\"", old_pin, new_pin) && at->recv("OK");
+       if (success) {
+           return NSAPI_ERROR_OK;
+       }
+
+       return NSAPI_ERROR_AUTH_FAILURE;
+}
+
+UbloxCellularInterface::UbloxCellularInterface(bool use_USB, bool debugOn)
+{
+    _new_pin = NULL;
+    _pin = NULL;
     _at = NULL;
     _dcd = NULL;
     _apn = "internet";
     _uname = NULL;
     _pwd = NULL;
+    memset(_ip_address, 0, NSAPI_IPv4_SIZE);
+    memset(_netmask, 0, NSAPI_IPv4_SIZE);
+    memset(_gateway, 0, NSAPI_IPv4_SIZE);
+    _debug_trace_on = false;
 
     _useUSB = use_USB;
     if (!use_USB) {
@@ -243,9 +287,9 @@ UbloxCellularInterface::UbloxCellularInterface(bool use_USB)
         return;
     }
 
-    /* setup dummy default pin */
-    char dummy_pin[] = "1234";
-    _pin = dummy_pin;
+    if (debugOn) {
+         _debug_trace_on = true;
+     }
 
     dev_info = new device_info;
     dev_info->dev = DEV_TYPE_NONE;
@@ -262,6 +306,28 @@ UbloxCellularInterface::~UbloxCellularInterface()
     delete dev_info;
 }
 
+void UbloxCellularInterface::connection_lost_notification_cb(void (*fptr)(nsapi_error_t))
+{
+    callback_fptr = fptr;
+}
+
+/**
+ * Public API. Sets up the flag for the driver to enable or disable SIM pin check
+ * at the next boot.
+ */
+void UbloxCellularInterface::add_remove_sim_pin_check(bool unlock)
+{
+    set_sim_pin_check_request = unlock;
+}
+
+/**
+ * Public API. Sets up the flag for the driver to change pin code for SIM card
+ */
+void UbloxCellularInterface::change_sim_pin(const char *new_pin)
+{
+    change_pin = true;
+    _new_pin = new_pin;
+}
 
 bool UbloxCellularInterface::nwk_registration_status()
 {
@@ -399,20 +465,18 @@ nsapi_error_t UbloxCellularInterface::setup_context_and_credentials()
         return NSAPI_ERROR_PARAMETER;
     }
 
-    if (_uname && _pwd) {
-        success = _at->send("AT+CGDCONT=1,\"IPV4V6\",\"CHAP:%s\"", _apn)
-               && _at->recv("OK");
-    } else {
-        success = _at->send("AT+CGDCONT=1,\"IPV4V6\",\"%s\"", _apn)
-               && _at->recv("OK");
-    }
+    bool try_ipv6 = true;
+    const char *auth = _uname && _pwd ? "CHAP:" : "";
 
-    if (!success) {
+retry_without_ipv6:
+    success = _at->send("AT+CGDCONT=1,\"%s\",\"%s%s\"", try_ipv6 ? "IPV4V6" : "IP", auth, _apn)
+                   && _at->recv("OK");
+
+    if (!success && try_ipv6) {
         /* Try enabling IPv6 (for next boot). We don't care if this command fails - find out if IPv6 works next time.  */
         set_UDCONF(_at);
-
-        success = _at->send("AT+CGDCONT=1,\"IP\",\"%s\"", _apn)
-               && _at->recv("OK");
+        try_ipv6 = false;
+        goto retry_without_ipv6;
     }
 
     return success ? NSAPI_ERROR_OK : NSAPI_ERROR_PARAMETER;
@@ -462,7 +526,8 @@ void UbloxCellularInterface::setup_at_parser()
         return;
     }
 
-    _at = new ATParser(*_fh);
+    _at = new ATParser(*_fh, AT_PARSER_BUFFER_SIZE, AT_PARSER_TIMEOUT,
+                         _debug_trace_on ? true : false);
 
     /* Error cases, out of band handling  */
     _at->oob("ERROR", callback(parser_abort, _at));
@@ -545,13 +610,37 @@ retry_init:
         }
 
         success = device_identity(&dev_info->dev) // setup device identity
-        && nwk_registration() //perform network registration
+                && nwk_registration() //perform network registration
                 && get_CCID(_at) //get integrated circuit ID of the SIM
                 && get_IMSI(_at) //get international mobile subscriber information
                 && get_IMEI(_at) //get international mobile equipment identifier
                 && get_MEID(_at) //its same as IMEI
                 && set_CMGF(_at) //set message format for SMS
                 && set_CNMI(_at); //set new SMS indication
+
+        if (!success) {
+            return NSAPI_ERROR_NO_CONNECTION;
+        }
+
+        /* Check if user want skip SIM pin checking on boot up */
+        if (set_sim_pin_check_request) {
+            retcode = do_add_remove_sim_pin_check(_at, _pin);
+            if (retcode != NSAPI_ERROR_OK) {
+                return retcode;
+            }
+            /* set this request to false, as it is unnecessary to repeat in case of retry */
+            set_sim_pin_check_request = false;
+        }
+
+        /* check if the user requested a sim pin change */
+        if (change_pin) {
+            retcode = do_change_sim_pin(_at, _pin, _new_pin);
+            if (retcode != NSAPI_ERROR_OK) {
+                return retcode;
+            }
+            /* set this request to false, as it is unnecessary to repeat in case of retry */
+            change_pin = false;
+        }
 
 #if MBED_CONF_UBLOX_C027_APN_LOOKUP && !set_credentials_api_used
         apn_config = apnconfig(dev_info->imsi);
@@ -645,6 +734,21 @@ nsapi_error_t UbloxCellularInterface::disconnect()
     }
 
     return ret;
+}
+
+const char *UbloxCellularInterface::get_ip_address()
+{
+    return nsapi_ppp_get_ip_addr(_ip_address, NSAPI_IPv4_SIZE);
+}
+
+const char *UbloxCellularInterface::get_netmask()
+{
+    return nsapi_ppp_get_netmask(_netmask, NSAPI_IPv4_SIZE);
+}
+
+const char *UbloxCellularInterface::get_gateway()
+{
+    return nsapi_ppp_get_ip_addr(_gateway, NSAPI_IPv4_SIZE);
 }
 
 /** Power down modem
