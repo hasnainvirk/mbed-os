@@ -76,7 +76,7 @@ public:
 
     virtual int set_blocking(bool blocking) { _blocking = blocking; return 0; }
 
-    void set_data_carrier_detect(PinName DCD_pin);
+    void set_data_carrier_detect(PinName DCD_pin, bool active_high=false);
 
 private:
 

@@ -41,14 +41,18 @@ void BufferedSerial::DCD_IRQ()
     _poll_change(MBED_POLLHUP);
 }
 
-void BufferedSerial::set_data_carrier_detect(PinName DCD_pin)
+void BufferedSerial::set_data_carrier_detect(PinName DCD_pin, bool active_high)
 {
     delete _dcd;
     _dcd = NULL;
 
     if (DCD_pin != NC) {
         _dcd = new InterruptIn(DCD_pin);
-        _dcd->rise(callback(this, &BufferedSerial::DCD_IRQ));
+        if (active_high) {
+            _dcd->fall(callback(this, &BufferedSerial::DCD_IRQ));
+        } else {
+            _dcd->rise(callback(this, &BufferedSerial::DCD_IRQ));
+        }
     }
 }
 
