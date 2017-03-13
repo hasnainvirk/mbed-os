@@ -13,7 +13,7 @@
    google: https://www.google.de/search?q=APN+list   
 ---------------------------------------------------------------- */
 
-#if MBED_CONF_UBLOX_C027_APN_LOOKUP
+#if MBED_CONF_MTS_DRAGONFLY_APN_LOOKUP
 //! helper to generate the APN string
 #define _APN(apn,username,password) apn "\0" username "\0" password "\0"
 
@@ -143,4 +143,4 @@ inline const char* apnconfig(const char* imsi)
         config = apndef;
     return config;
 }
-#endif //MBED_CONF_UBLOX_C027_APN_LOOKUP
+#endif //MBED_CONF_MTS_DRAGONFLY_APN_LOOKUP
