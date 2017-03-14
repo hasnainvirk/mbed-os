@@ -745,7 +745,7 @@ static nsapi_error_t mbed_lwip_socket_open(nsapi_stack_t *stack, nsapi_socket_t 
         return NSAPI_ERROR_NO_SOCKET;
     }
 
-    u8_t lwip_proto = proto == NSAPI_TCP ? NETCONN_TCP : NETCONN_UDP;
+    enum netconn_type lwip_proto = proto == NSAPI_TCP ? NETCONN_TCP : NETCONN_UDP;
 
 #if LWIP_IPV6 && LWIP_IPV4
     const ip_addr_t *ip_addr;

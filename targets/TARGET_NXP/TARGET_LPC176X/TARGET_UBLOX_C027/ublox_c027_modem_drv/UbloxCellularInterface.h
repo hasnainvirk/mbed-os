@@ -240,10 +240,6 @@ protected:
      */
     virtual NetworkStack *get_stack();
 
-    char _ip_address[NSAPI_IPv4_SIZE];
-    char _netmask[NSAPI_IPv4_SIZE];
-    char _gateway[NSAPI_IPv4_SIZE];
-
 };
 
 

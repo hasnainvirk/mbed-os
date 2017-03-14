@@ -250,6 +250,10 @@
 #define LWIP_ETHERNET               1
 #define LWIP_CHECKSUM_ON_COPY       1
 #define LWIP_DHCP                   LWIP_IPV4
+#else
+#define LWIP_ARP                    0
+#define LWIP_ETHERNET               0
+#define LWIP_CHECKSUM_ON_COPY       0
 #endif // MBED_CONF_LWIP_ETHERNET_ENABLED
 
 #if MBED_CONF_LWIP_PPP_ENABLED
@@ -271,11 +275,6 @@
 #define MAXSECRETLEN                64
 #endif // MBED_CONF_LWIP_PPP_ENABLED
 
-// Make sure we default these to off, so
-// LWIP doesn't default to on
-#ifndef LWIP_ARP
-#define LWIP_ARP                    0
-#endif
 
 #define LWIP_NETIF_HOSTNAME         1
 #define LWIP_NETIF_STATUS_CALLBACK  1
