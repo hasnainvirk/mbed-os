@@ -26,9 +26,9 @@ namespace mbed {
 NetworkStack *nsapi_ppp_get_stack();
 nsapi_error_t nsapi_ppp_connect(FileHandle *stream, void(*link_down_cb)(int)=0, const char *uname=0, const char *pwd=0);
 nsapi_error_t nsapi_ppp_disconnect(FileHandle *stream);
-char *nsapi_ppp_get_ip_addr(char *ip_addr, nsapi_size_t buflen);
-char *nsapi_ppp_get_netmask(char *netmask, nsapi_size_t buflen);
-char *nsapi_ppp_get_gw_addr(char *gateway_addr, nsapi_size_t buflen);
+const char *nsapi_ppp_get_ip_addr(FileHandle *stream);
+const char *nsapi_ppp_get_netmask(FileHandle *stream);
+const char *nsapi_ppp_get_gw_addr(FileHandle *stream);
 } //namespace mbed
 
 #endif /* NSAPI_PPP_H_ */

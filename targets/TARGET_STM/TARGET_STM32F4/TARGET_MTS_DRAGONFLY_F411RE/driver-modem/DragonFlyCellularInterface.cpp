@@ -301,9 +301,6 @@ DragonFlyCellularInterface::DragonFlyCellularInterface(bool use_USB, bool debugO
     _apn = "internet";
     _uname = NULL;
     _pwd = NULL;
-    memset(_ip_address, 0, NSAPI_IPv4_SIZE);
-    memset(_netmask, 0, NSAPI_IPv4_SIZE);
-    memset(_gateway, 0, NSAPI_IPv4_SIZE);
     _debug_trace_on = false;
 
     _useUSB = use_USB;
@@ -616,6 +613,7 @@ void DragonFlyCellularInterface::setup_at_parser()
     _at->oob("ERROR", callback(parser_abort, _at));
     _at->oob("+CME ERROR", callback(parser_abort, _at));
     _at->oob("+CMS ERROR", callback(parser_abort, _at));
+    _at->oob("NO CARRIER", callback(parser_abort, _at));
 
     /* URCs, handled out of band */
     _at->oob("+CMT", callback(CMT_URC, _at));
@@ -837,17 +835,17 @@ nsapi_error_t DragonFlyCellularInterface::disconnect()
 
 const char *DragonFlyCellularInterface::get_ip_address()
 {
-    return nsapi_ppp_get_ip_addr(_ip_address, NSAPI_IPv4_SIZE);
+    return nsapi_ppp_get_ip_addr(_fh);
 }
 
 const char *DragonFlyCellularInterface::get_netmask()
 {
-    return nsapi_ppp_get_netmask(_netmask, NSAPI_IPv4_SIZE);
+    return nsapi_ppp_get_netmask(_fh);
 }
 
 const char *DragonFlyCellularInterface::get_gateway()
 {
-    return nsapi_ppp_get_ip_addr(_gateway, NSAPI_IPv4_SIZE);
+    return nsapi_ppp_get_ip_addr(_fh);
 }
 
 /** Power down modem
@@ -900,8 +898,7 @@ bool DragonFlyCellularInterface::PowerUpModem()
 
     /*For more details regarding DCD and DTR circuitry, please refer to LISA-U2 System integration manual
      * and Ublox AT commands manual*/
-    //"&F1;"
-    //"Z;"
+
     success = _at->send("AT"
                         "E0;" //turn off modem echoing
                         "&K0"//turn off RTC/CTS handshaking
