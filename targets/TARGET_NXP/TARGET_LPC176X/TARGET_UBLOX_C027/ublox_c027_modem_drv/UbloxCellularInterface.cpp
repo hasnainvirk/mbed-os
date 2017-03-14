@@ -273,9 +273,6 @@ UbloxCellularInterface::UbloxCellularInterface(bool use_USB, bool debugOn)
     _apn = "internet";
     _uname = NULL;
     _pwd = NULL;
-    memset(_ip_address, 0, NSAPI_IPv4_SIZE);
-    memset(_netmask, 0, NSAPI_IPv4_SIZE);
-    memset(_gateway, 0, NSAPI_IPv4_SIZE);
     _debug_trace_on = false;
 
     _useUSB = use_USB;
@@ -738,17 +735,17 @@ nsapi_error_t UbloxCellularInterface::disconnect()
 
 const char *UbloxCellularInterface::get_ip_address()
 {
-    return nsapi_ppp_get_ip_addr(_ip_address, NSAPI_IPv4_SIZE);
+    return nsapi_ppp_get_ip_addr(_fh);
 }
 
 const char *UbloxCellularInterface::get_netmask()
 {
-    return nsapi_ppp_get_netmask(_netmask, NSAPI_IPv4_SIZE);
+    return nsapi_ppp_get_netmask(_fh);
 }
 
 const char *UbloxCellularInterface::get_gateway()
 {
-    return nsapi_ppp_get_ip_addr(_gateway, NSAPI_IPv4_SIZE);
+    return nsapi_ppp_get_ip_addr(_fh);
 }
 
 /** Power down modem

@@ -374,26 +374,45 @@ NetworkStack *nsapi_ppp_get_stack()
     return nsapi_create_stack(&lwip_stack);
 }
 
-char *nsapi_ppp_get_ip_addr(char *ip_addr, nsapi_size_t buflen)
+const char *nsapi_ppp_get_ip_addr(FileHandle *stream)
 {
-    if (mbed_lwip_get_ip_address(ip_addr, buflen)) {
-        return ip_addr;
+    static char ip_addr[IPADDR_STRLEN_MAX];
+
+    if (stream == my_stream) {
+
+        if (mbed_lwip_get_ip_address(ip_addr, IPADDR_STRLEN_MAX)) {
+            return ip_addr;
+        }
     }
 
     return NULL;
 }
-char *nsapi_ppp_get_netmask(char *netmask, nsapi_size_t buflen)
+const char *nsapi_ppp_get_netmask(FileHandle *stream)
 {
-    if (mbed_lwip_get_netmask(netmask, buflen)) {
-        return netmask;
+#if LWIP_IPV6
+    return NULL;
+#endif
+
+    static char netmask[IPADDR_STRLEN_MAX];
+    if (stream == my_stream) {
+        if (mbed_lwip_get_netmask(netmask, IPADDR_STRLEN_MAX)) {
+            return netmask;
+        }
     }
 
     return NULL;
 }
-char *nsapi_ppp_get_gw_addr(char *default_gw_addr)
+const char *nsapi_ppp_get_gw_addr(FileHandle *stream)
 {
-    if (mbed_lwip_get_gateway(default_gw_addr, sizeof default_gw_addr)) {
-        return default_gw_addr;
+#if LWIP_IPV6
+    return NULL;
+#endif
+
+    static char gwaddr[IPADDR_STRLEN_MAX];
+    if (stream == my_stream) {
+        if (mbed_lwip_get_gateway(gwaddr, IPADDR_STRLEN_MAX)) {
+            return gwaddr;
+        }
     }
 
     return NULL;
