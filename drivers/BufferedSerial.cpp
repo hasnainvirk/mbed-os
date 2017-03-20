@@ -16,6 +16,7 @@
 
 #if DEVICE_SERIAL
 
+#include <errno.h>
 #include "drivers/BufferedSerial.h"
 #include "rtos.h"
 
@@ -73,14 +74,23 @@ off_t BufferedSerial::lseek(off_t offset, int whence)
 {
     /*XXX lseek can be done theoratically, but is it sane to mark positions on a dynamically growing/shrinking
      * buffer system (from an interrupt context) */
-    return -1;
+    return -ESPIPE;
 }
 
 int BufferedSerial::fsync()
 {
-    /* a possible implementation is to block until the tx buffers are drained.
-     * currently returns a posix EINVAL */
-    return -1;
+    lock();
+
+    while (!_txbuf.empty()) {
+        unlock();
+        // Doing better than yield would require TxIRQ to also do poll_change when becoming empty. Worth it?
+        rtos::Thread::yield();
+        lock();
+    }
+
+    unlock();
+
+    return 0;
 }
 
 ssize_t BufferedSerial::write(const void* buffer, size_t length)
@@ -93,10 +103,10 @@ ssize_t BufferedSerial::write(const void* buffer, size_t length)
     while (_txbuf.full()) {
         if (!_blocking) {
             unlock();
-            return -1; // WOULD_BLOCK probably
+            return -EAGAIN;
         }
         unlock();
-        rtos::Thread::yield();
+        rtos::Thread::yield(); // XXX todo - proper wait, WFE for non-rtos ?
         lock();
     }
 
@@ -131,7 +141,7 @@ ssize_t BufferedSerial::read(void* buffer, size_t length)
     while (_rxbuf.empty()) {
         if (!_blocking) {
             unlock();
-            return -1; // WOULDBLOCK?
+            return -EAGAIN;
         }
         unlock();
         rtos::Thread::yield(); // XXX todo - proper wait, WFE for non-rtos ?

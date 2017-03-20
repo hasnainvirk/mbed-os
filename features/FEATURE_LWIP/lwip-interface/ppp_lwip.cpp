@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <errno.h>
 #include "drivers/FileHandle.h"
 #include "events/EventQueue.h"
 #if defined(FEATURE_COMMON_PAL)
@@ -102,16 +103,20 @@ static u32_t ppp_output(ppp_pcb *pcb, u8_t *data, u32_t len, void *ctx)
     // Therefore must use poll to achieve the necessary block for writing.
 
     uint32_t written = 0;
-    while (written < len) {
+    while (len != 0) {
         // Block forever until we're selected - don't care about reason we wake;
         // return from write should tell us what's up.
         mbed_poll(&fhs, 1, -1);
         // This write will be non-blocking, but blocking would be fine.
         ssize_t ret = stream->write(data, len);
-        if (ret < 0) {
+        if (ret == -EAGAIN) {
+            continue;
+        } else if (ret < 0) {
             break;
         }
         written += ret;
+        data += ret;
+        len -= ret;
     }
 
 //    /tr_debug("> %ld bytes of data written\n", (long) written);
@@ -242,23 +247,29 @@ static void ppp_input()
     fhs.events = MBED_POLLIN;
     mbed_poll(&fhs, 1, 0);
     if (fhs.revents & (MBED_POLLHUP|MBED_POLLERR|MBED_POLLNVAL)) {
-        if (my_ppp_pcb->phase != PPP_PHASE_DEAD) {
-            ppp_close(my_ppp_pcb, 1);
-        }
-        return;
+        goto hup;
     }
 
     // Infinite loop, but we assume that we can read faster than the
-    // serial, so we will fairly rapidly hit WOULDBLOCK.
+    // serial, so we will fairly rapidly hit -EAGAIN.
     for (;;) {
         u8_t buffer[16];
         ssize_t len = my_stream->read(buffer, sizeof buffer);
-        if (len <= 0) {
-            // error - (XXX should do something if not WOULDBLOCK)
+        if (len == -EAGAIN) {
             break;
+        } else if (len <= 0) {
+            goto hup;
         }
         pppos_input(my_ppp_pcb, buffer, len);
     }
+    return;
+
+hup:
+    if (my_ppp_pcb->phase != PPP_PHASE_DEAD) {
+        ppp_close(my_ppp_pcb, 1);
+    }
+    return;
+
 }
 
 static void stream_cb(short events) {

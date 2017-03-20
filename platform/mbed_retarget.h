@@ -96,6 +96,12 @@ extern "C" {
 #endif
 #define EBADF       9       /* Bad file number */
 
+#undef EAGAIN
+#define EAGAIN      11      /* Resource unavailable, try again */
+
+#undef EWOULDBLOCK
+#define EWOULDBLOCK EAGAIN  /* Operation would block */
+
 #ifdef ENOMEM
 #undef ENOMEM
 #endif
@@ -131,10 +137,15 @@ extern "C" {
 #endif
 #define EMFILE      24      /* File descriptor value too large */
 
+#undef ESPIPE
+#define ESPIPE      29      /* Invalid seek */
+
 #ifdef ENOSYS
 #undef ENOSYS
 #endif
 #define ENOSYS      38      /* Function not implemented */
+
+
 
 /* Missing stat.h defines.
  * The following are sys/stat.h definitions not currently present in the ARMCC

@@ -69,9 +69,9 @@ public:
      *
      *  Devices acting as FileHandles should follow POSIX semantics:
      *
-     *  * if no data is available, and non-blocking set return -1 (EAGAIN/WOULDBLOCK?)
+     *  * if no data is available, and non-blocking set return -EAGAIN
      *  * if no data is available, and blocking set, wait until data is available
-     *  * If any data is available, call returns imidiately
+     *  * If any data is available, call returns immediately
      *
      *  @param buffer the buffer to read in to
      *  @param length the number of characters to read
