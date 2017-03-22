@@ -27,6 +27,7 @@
  */
 #include "cmsis.h"
 #include "us_ticker_api.h"
+#include "platform/mbed_toolchain.h"
 
 // This function is called after RAM initialization and before main.
 void mbed_sdk_init()
