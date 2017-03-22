@@ -224,6 +224,7 @@ private:
     bool nwk_registration_status();
     bool PowerUpModem();
     void PowerDownModem();
+    void ResetModem();
 
 protected:
     /** Provide access to the underlying stack
