@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
+#include "ublox_low_level_api.h"
 #include "UbloxCellularInterface.h"
 #include "nsapi_ppp.h"
-#include "C027_api.h"
 #include "BufferedSerial.h"
 #if MBED_CONF_UBLOX_C027_APN_LOOKUP
 #include "APN_db.h"
@@ -763,7 +763,7 @@ void UbloxCellularInterface::PowerDownModem()
 bool UbloxCellularInterface::PowerUpModem()
 {
     /* Initialize GPIO lines */
-    c027_mdm_powerOn(_useUSB);
+    ublox_mdm_powerOn(_useUSB);
     wait(0.25);
 
     bool success = false;
