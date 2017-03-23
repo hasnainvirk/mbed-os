@@ -14,7 +14,7 @@
  */
 
 #include "ublox_low_level_api.h"
-#include "UbloxCellularInterface.h"
+#include "ublox_modem_driver/UbloxCellularInterface.h"
 #include "nsapi_ppp.h"
 #include "BufferedSerial.h"
 #if MBED_CONF_UBLOX_C027_APN_LOOKUP

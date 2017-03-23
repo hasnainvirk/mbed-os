@@ -1276,7 +1276,7 @@
         "inherits": ["Target"],
         "core": "Cortex-M4F",
         "supported_toolchains": ["ARM", "uARM", "GCC_ARM", "IAR"],
-        "extra_labels": ["STM", "STM32F4", "STM32F411RE"],
+        "extra_labels": ["STM", "STM32F4", "STM32F411RE", "DRAGONFLY_MODEM"],
         "macros": ["HSE_VALUE=26000000", "VECT_TAB_OFFSET=0x08010000","TRANSACTION_QUEUE_SIZE_SPI=2", "RTC_LSI=1"],
         "post_binary_hook": {
             "function": "MTSCode.combine_bins_mts_dragonfly",
