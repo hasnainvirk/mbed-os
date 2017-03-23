@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "driver-modem/DragonFlyCellularInterface.h"
+#include "dragonfly_modem_driver/DragonFlyCellularInterface.h"
 
 #include "nsapi_ppp.h"
 #include "BufferedSerial.h"
