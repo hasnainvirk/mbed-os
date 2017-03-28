@@ -13,9 +13,10 @@
  * limitations under the License.
  */
 
+#include "dragonfly_modem_driver/DragonFlyCellularInterface.h"
+
 #include "nsapi_ppp.h"
 #include "BufferedSerial.h"
-#include "DragonFlyCellularInterface.h"
 #if MBED_CONF_MTS_DRAGONFLY_APN_LOOKUP
 #include "APN_db.h"
 #endif //MBED_CONF_MTS_DRAGONFLY_APN_LOOKUP
@@ -848,19 +849,8 @@ const char *DragonFlyCellularInterface::get_gateway()
     return nsapi_ppp_get_ip_addr(_fh);
 }
 
-/** Reset modem and radio
- *  Uses AT command to reboot the modem and hold reset line low for radio reset */
-void DragonFlyCellularInterface::ResetModem()
-{
-    /* Minimum pulse 200 micro-seconds, unconditional radio sutdown*/
-
-    //set the MDMRST line to low
-    rst_line = 0;
-    tr_debug("Resetting ...");
-    wait_ms(400);
-    _at->send("AT#REBOOT");
-}
-
+/** Power down modem
+ *  Uses AT command to do it */
 void DragonFlyCellularInterface::PowerDownModem()
 {
     /* If the reset line kept low for 1 second, it turns the radio off DGF Device guide, page no. 22
@@ -868,10 +858,10 @@ void DragonFlyCellularInterface::PowerDownModem()
      * the network, so the actual poweroff may take upto 30 seconds. How to handle  that ? */
     tr_debug("Safely shutting down modem. Can take 30 seconds. WAIT ...");
     _at->send("AT#SHDN");
-    //set the MDMRST line to low
-    rst_line = 0;
     /*wait 30 seconds */
     wait_ms(30*1000);
+    //set the MDMRST line to low
+    rst_line = 0;
 }
 
 /**
@@ -890,7 +880,7 @@ bool DragonFlyCellularInterface::PowerUpModem()
         wait_ms(100);
         /* Modem tends to spit out noise during power up - don't confuse the parser */
         _at->flush();
-        /* It is mandatory to avoid sending data to the serial port during the first 200 ms
+        /* It is mandatory to avoid sending data to the serial port during the fiorst 200 ms
          * of the module startup. Telit_xE910 Global form factor App note.
          * http://www.telit.com/fileadmin/user_upload/media/products/cellular/HE_910_Series
          * /Telit_xE910_Global_Form_Factor_Application_Note_r15.pdf*/
@@ -927,6 +917,21 @@ bool DragonFlyCellularInterface::PowerUpModem()
     failure:
     tr_error("Preliminary modem setup failed.");
     return false;
+}
+
+/** Reset modem and radio
+ *
+ *  Uses AT command to reboot the modem and hold reset line low for radio reset
+ */
+void DragonFlyCellularInterface::ResetModem()
+{
+    /* Minimum pulse 200 micro-seconds, unconditional radio sutdown*/
+
+    //set the MDMRST line to low
+    rst_line = 0;
+    tr_debug("Resetting ...");
+    wait_ms(400);
+    _at->send("AT#REBOOT");
 }
 
 /**
