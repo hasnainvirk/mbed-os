@@ -77,70 +77,53 @@ extern "C" {
  * Note also that ARMCC errno.h defines some symbol values differently from
  * the GCC_ARM/IAR/standard POSIX definitions. The definitions guard against
  * this and future changes by changing the symbol definition as shown below. */
-#ifdef ENOENT
 #undef ENOENT
-#endif
 #define ENOENT      2       /* No such file or directory. */
 
-#ifdef EIO
 #undef EIO
-#endif
 #define EIO         5       /* I/O error */
 
-#ifdef ENXIO
 #undef ENXIO
-#endif
 #define ENXIO       6       /* No such device or address */
 
-#ifdef ENOEXEC
 #undef ENOEXEC
-#endif
 #define ENOEXEC     8       /* Exec format error */
 
-#ifdef EBADF
 #undef EBADF
-#endif
 #define EBADF       9       /* Bad file number */
 
-#ifdef ENOMEM
 #undef ENOMEM
-#endif
 #define ENOMEM      12      /* Not enough space */
 
-#ifdef EACCES
 #undef EACCES
-#endif
 #define EACCES      13      /* Permission denied */
 
-#ifdef EFAULT
 #undef EFAULT
-#endif
 #define EFAULT      14      /* Bad address */
 
-#ifdef EEXIST
 #undef EEXIST
-#endif
 #define EEXIST      17      /* File exists */
 
-#ifdef EINVAL
+#undef EXDEV
+#define EXDEV       18      /* Cross-device link */
+
 #undef EINVAL
-#endif
 #define EINVAL      22      /* Invalid argument */
 
-#ifdef ENFILE
 #undef ENFILE
-#endif
 #define ENFILE      23      /* Too many open files in system */
 
-#ifdef EMFILE
 #undef EMFILE
-#endif
 #define EMFILE      24      /* File descriptor value too large */
 
-#ifdef ENOSYS
+#undef ESPIPE
+#define ESPIPE      29      /* Invalid seek */
+
 #undef ENOSYS
-#endif
 #define ENOSYS      38      /* Function not implemented */
+
+#undef EOVERFLOW
+#define EOVERFLOW   75      /* Value too large to be stored in data type */
 
 /* Missing stat.h defines.
  * The following are sys/stat.h definitions not currently present in the ARMCC
