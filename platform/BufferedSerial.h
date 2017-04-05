@@ -22,13 +22,13 @@
 /** Software buffer size for
  *  Serial TX*/
 #ifndef SW_SERIAL_TX_BUF
-#define SW_SERIAL_TX_BUF    300
+#define SW_SERIAL_TX_BUF    500
 #endif //SW_SERIAL_TX_BUF
 
 /** Software buffer size for
  *  Serial RX*/
 #ifndef SW_SERIAL_RX_BUF
-#define SW_SERIAL_RX_BUF    300
+#define SW_SERIAL_RX_BUF    500
 #endif //SW_SERIAL_RX_BUF
 
 #if DEVICE_SERIAL
@@ -84,8 +84,8 @@ private:
      *  By default buffer size is 2K for TX and 2K for RX. Configurable through mbed_app.json
      */
 
-    CircularBuffer<char, SW_SERIAL_RX_BUF> _rxbuf;
-    CircularBuffer<char, SW_SERIAL_TX_BUF> _txbuf;
+    CircularBuffer<char, MBED_CONF_PLATFORM_BUFFERED_SERIAL_RXBUF_SIZE> _rxbuf;
+    CircularBuffer<char, MBED_CONF_PLATFORM_BUFFERED_SERIAL_TXBUF_SIZE> _txbuf;
 
     PlatformMutex _mutex;
 

@@ -17,9 +17,9 @@
 #if DEVICE_SERIAL
 
 #include <errno.h>
-#include "drivers/BufferedSerial.h"
+#include "platform/BufferedSerial.h"
 #include "platform/mbed_poll.h"
-#include "rtos.h"
+#include "rtos/rtos.h"
 
 namespace mbed {
 
