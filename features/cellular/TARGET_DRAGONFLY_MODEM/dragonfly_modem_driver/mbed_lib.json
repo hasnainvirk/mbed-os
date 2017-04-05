@@ -1,7 +1,9 @@
 {
 		"name": "mts-dragonfly", 
 			"config": {
-				"apn-lookup": false
+				"apn-lookup": false,
+				"at-parser-buffer-size": 256,
+				"at-parser-timeout": 8000
 			},
 	    "target_overrides": {
 			"*": {

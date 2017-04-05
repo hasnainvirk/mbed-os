@@ -15,8 +15,9 @@
 
 #include "ublox_low_level_api.h"
 #include "ublox_modem_driver/UbloxCellularInterface.h"
+
+#include "platform/BufferedSerial.h"
 #include "nsapi_ppp.h"
-#include "BufferedSerial.h"
 #if MBED_CONF_UBLOX_C027_APN_LOOKUP
 #include "APN_db.h"
 #endif //MBED_CONF_UBLOX_C027_APN_LOOKUP
@@ -30,8 +31,19 @@
 #endif //defined(FEATURE_COMMON_PAL)
 
 #define BAUD_RATE   115200
+
+#if MBED_CONF_UBLOX_C027_AT_PARSER_BUFFER_SIZE
+#define AT_PARSER_BUFFER_SIZE   MBED_CONF_UBLOX_C027_AT_PARSER_BUFFER_SIZE //bytes
+#else
 #define AT_PARSER_BUFFER_SIZE   256 //bytes
+#endif //MBED_CONF_UBLOX_C027_AT_PARSER_BUFFER_SIZE
+
+#if MBED_CONF_UBLOX_C027_AT_PARSER_TIMEOUT
+#define AT_PARSER_TIMEOUT       MBED_CONF_UBLOX_C027_AT_PARSER_TIMEOUT
+#else
 #define AT_PARSER_TIMEOUT       8*1000 //miliseconds
+#endif //MBED_CONF_UBLOX_C027_AT_PARSER_TIMEOUT
+
 
 static void ppp_connection_down_cb(nsapi_error_t err);
 static void (*callback_fptr)(nsapi_error_t);
