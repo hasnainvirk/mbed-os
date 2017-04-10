@@ -19,7 +19,9 @@
 #include <errno.h>
 #include "platform/BufferedSerial.h"
 #include "platform/mbed_poll.h"
+#ifdef MBED_CONF_RTOS_PRESENT
 #include "rtos/rtos.h"
+#endif
 
 namespace mbed {
 
@@ -84,8 +86,12 @@ int BufferedSerial::sync()
 
     while (!_txbuf.empty()) {
         unlock();
+#ifdef MBED_CONF_RTOS_PRESENT
         // Doing better than yield would require TxIRQ to also do poll_change when becoming empty. Worth it?
         rtos::Thread::yield();
+#endif
+        // In non-RTOS environment, nothing else is waiting for processor's attention, so let it
+        //consume 100 percent resources. TODO proper wait, WFE or WFI
         lock();
     }
 
@@ -107,7 +113,11 @@ ssize_t BufferedSerial::write(const void* buffer, size_t length)
             return -EAGAIN;
         }
         unlock();
+#ifdef MBED_CONF_RTOS_PRESENT
         rtos::Thread::yield(); // XXX todo - proper wait, WFE for non-rtos ?
+#endif
+        // In non-RTOS environment, nothing else is waiting for processor's attention, so let it
+        //consume 100 percent resources. TODO proper wait, WFE or WFI
         lock();
     }
 
@@ -145,7 +155,9 @@ ssize_t BufferedSerial::read(void* buffer, size_t length)
             return -EAGAIN;
         }
         unlock();
+#ifdef MBED_CONF_RTOS_PRESENT
         rtos::Thread::yield(); // XXX todo - proper wait, WFE for non-rtos ?
+#endif
         lock();
     }
 
