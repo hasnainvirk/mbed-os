@@ -53,6 +53,8 @@ private:
     int _timeout;
 
     // Parsing information
+    const char *_output_delimiter;
+    int _output_delim_size;
     char _in_prev;
     bool dbg_on;
     bool _aborted;
@@ -78,13 +80,14 @@ public:
     * @param buffer_size size of internal buffer for transaction
     * @param timeout timeout of the connection
     */
-    ATParser(FileHandle &fh, int buffer_size = 256, int timeout = 8000, bool debug = false) :
+    ATParser(FileHandle &fh, const char *output_delimiter="\r", int buffer_size = 256, int timeout = 8000, bool debug = false) :
         _fh(&fh),
         _buffer_size(buffer_size),
         _in_prev(0),
         _oobs(NULL) {
         _buffer = new char[buffer_size];
         setTimeout(timeout);
+        setDelimiter(output_delimiter);
         debugOn(debug);
     }
 
@@ -107,6 +110,17 @@ public:
     */
     void setTimeout(int timeout) {
         _timeout = timeout;
+    }
+
+    /**
+     * Sets string of characters to use as line delimiters
+     *
+     * @param delimiter string of characters to use as line delimiters
+     */
+    void setDelimiter(const char *output_delimiter)
+    {
+        _output_delimiter = output_delimiter;
+        _output_delim_size = strlen(output_delimiter);
     }
 
     /**

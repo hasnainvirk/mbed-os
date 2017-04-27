@@ -51,6 +51,11 @@
  */
 #define BAUD_RATE   115200
 
+/**
+ * Output Enter sequence for the modem , default CR
+ */
+#define OUTPUT_ENTER_KEY  "\r"
+
 static void ppp_connection_down_cb(nsapi_error_t);
 static void (*callback_fptr)(nsapi_error_t);
 static bool initialized = false;
@@ -617,7 +622,7 @@ void DragonFlyCellularInterface::setup_at_parser()
         return;
     }
 
-    _at = new ATParser(*_fh, AT_PARSER_BUFFER_SIZE, AT_PARSER_TIMEOUT,
+    _at = new ATParser(*_fh, OUTPUT_ENTER_KEY, AT_PARSER_BUFFER_SIZE, AT_PARSER_TIMEOUT,
                        _debug_trace_on ? true : false);
 
     /* Error cases, out of band handling  */

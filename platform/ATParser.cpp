@@ -25,8 +25,6 @@
 #define LF 10
 #define CR 13
 
-static const char enter[] = { CR };
-
 // getc/putc handling with timeouts
 int ATParser::putc(char c)
 {
@@ -211,8 +209,8 @@ bool ATParser::vsend(const char *command, va_list args)
     }
 
     // Finish with newline
-    for (size_t i = 0; i < sizeof enter; i++) {
-        if (putc(enter[i]) < 0) {
+    for (size_t i = 0; _output_delimiter[i]; i++) {
+        if (putc(_output_delimiter[i]) < 0) {
             return false;
         }
     }

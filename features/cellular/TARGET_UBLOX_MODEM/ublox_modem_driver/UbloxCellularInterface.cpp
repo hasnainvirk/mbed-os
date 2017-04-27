@@ -32,6 +32,11 @@
 
 #define BAUD_RATE   115200
 
+/**
+ * Output Enter sequence for the modem , default CR
+ */
+#define OUTPUT_ENTER_KEY  "\r"
+
 #if MBED_CONF_UBLOX_C027_AT_PARSER_BUFFER_SIZE
 #define AT_PARSER_BUFFER_SIZE   MBED_CONF_UBLOX_C027_AT_PARSER_BUFFER_SIZE //bytes
 #else
@@ -535,7 +540,7 @@ void UbloxCellularInterface::setup_at_parser()
         return;
     }
 
-    _at = new ATParser(*_fh, AT_PARSER_BUFFER_SIZE, AT_PARSER_TIMEOUT,
+    _at = new ATParser(*_fh, OUTPUT_ENTER_KEY, AT_PARSER_BUFFER_SIZE, AT_PARSER_TIMEOUT,
                          _debug_trace_on ? true : false);
 
     /* Error cases, out of band handling  */
