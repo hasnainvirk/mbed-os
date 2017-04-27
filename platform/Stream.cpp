@@ -106,7 +106,7 @@ void Stream::rewind() {
 }
 
 int Stream::isatty() {
-    return 0;
+    return 1;
 }
 
 int Stream::sync() {
