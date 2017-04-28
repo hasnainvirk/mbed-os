@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "ublox_low_level_api.h"
+#include "modem_api.h"
 #include "ublox_modem_driver/UbloxCellularInterface.h"
 
 #include "platform/BufferedSerial.h"
@@ -769,7 +769,8 @@ const char *UbloxCellularInterface::get_gateway()
  *  Uses AT command to do it */
 void UbloxCellularInterface::PowerDownModem()
 {
-    _at->send("AT+CPWROFF") && _at->recv("OK");
+    modem_power_down();
+    modem_deinit();
 }
 
 /**
@@ -780,20 +781,14 @@ void UbloxCellularInterface::PowerDownModem()
 bool UbloxCellularInterface::PowerUpModem()
 {
     /* Initialize GPIO lines */
-    ublox_mdm_powerOn(_useUSB);
+    modem_init();
     wait(0.25);
 
     bool success = false;
-       // The power on call does everything except press the "power" button - this is that
-       // button. Pulse low briefly to turn it on, hold it low for 1 second to turn it off.
-       DigitalOut pwrOn(MDMPWRON, 1);
 
        int retry_count = 0;
        while(true) {
-           pwrOn = 0;
-           wait_ms(150);
-           pwrOn = 1;
-           wait_ms(100);
+           modem_power_up();
            /* Modem tends to spit out noise during power up - don't confuse the parser */
            _at->flush();
            _at->setTimeout(1000);

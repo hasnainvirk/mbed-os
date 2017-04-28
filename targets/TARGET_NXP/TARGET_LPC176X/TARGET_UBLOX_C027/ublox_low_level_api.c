@@ -59,7 +59,7 @@ void ublox_mdm_powerOn(int usb) {
     }
 }
 
-void ublox_powerOff(void) {
+void ublox_mdm_powerOff(void) {
     gpio_t gpio;
     if (modemOn) {
         // diable all level shifters

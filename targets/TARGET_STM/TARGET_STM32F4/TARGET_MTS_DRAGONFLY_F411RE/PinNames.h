@@ -148,7 +148,7 @@ typedef enum {
     RADIO_DSR   = NC,
     RADIO_DTR   = NC,
     RADIO_RI    = NC,
-    MDMRST  = PC_13, // 3G_ONOFF DragonFly Design Guide, Page No. 16
+    MDMPWRON  = PC_13, // 3G_ONOFF DragonFly Design Guide, Page No. 16
     MDMTXD = RADIO_TX, // Transmit Data
     MDMRXD = RADIO_RX, // Receive Data
     MDMRTS = RADIO_RTS, // Request to Send
@@ -191,6 +191,12 @@ typedef enum {
     SPI_CS2     = PB_14
 
 } PinName;
+
+#define ACTIVE_HIGH_POLARITY    1
+#define ACTIVE_LOW_POLARITY     0
+
+#define MDMDCD_POLARITY            ACTIVE_HIGH_POLARITY
+
 
 #ifdef __cplusplus
 }

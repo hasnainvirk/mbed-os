@@ -63,7 +63,7 @@ static bool set_credentials_api_used = false;
 static bool set_sim_pin_check_request = false;
 static bool change_pin = false;
 static device_info *dev_info;
-DigitalOut rst_line(MDMRST, 0);
+DigitalOut pwrOn(MDMPWRON, 0);
 
 static void parser_abort(ATParser *at)
 {
@@ -875,8 +875,8 @@ void DragonFlyCellularInterface::PowerDownModem()
     _at->send("AT#SHDN");
     /*wait 30 seconds */
     wait_ms(30*1000);
-    //set the MDMRST line to low
-    rst_line = 0;
+    //set the MDMPWRON line to low
+    pwrOn = 0;
 }
 
 /**
@@ -885,13 +885,13 @@ void DragonFlyCellularInterface::PowerDownModem()
 bool DragonFlyCellularInterface::PowerUpModem()
 {
     bool success = false;
-    /* pull the MDMRST line up */
-    rst_line = 1;
+    /* pull the MDMPWRON line up */
+    pwrOn = 1;
     int retry_count = 0;
     while (true) {
-        rst_line = 0;
+        pwrOn = 0;
         wait_ms(300);
-        rst_line = 1;
+        pwrOn = 1;
         wait_ms(100);
         /* Modem tends to spit out noise during power up - don't confuse the parser */
         _at->flush();
@@ -942,8 +942,8 @@ void DragonFlyCellularInterface::ResetModem()
 {
     /* Minimum pulse 200 micro-seconds, unconditional radio sutdown*/
 
-    //set the MDMRST line to low
-    rst_line = 0;
+    //set the MDMPWRON line to low
+    pwrOn = 0;
     tr_debug("Resetting ...");
     wait_ms(400);
     _at->send("AT#REBOOT");
