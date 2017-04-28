@@ -540,7 +540,7 @@ void UbloxCellularInterface::setup_at_parser()
         return;
     }
 
-    _at = new ATParser(*_fh, OUTPUT_ENTER_KEY, AT_PARSER_BUFFER_SIZE, AT_PARSER_TIMEOUT,
+    _at = new ATParser(_fh, OUTPUT_ENTER_KEY, AT_PARSER_BUFFER_SIZE, AT_PARSER_TIMEOUT,
                          _debug_trace_on ? true : false);
 
     /* Error cases, out of band handling  */

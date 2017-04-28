@@ -80,8 +80,8 @@ public:
     * @param buffer_size size of internal buffer for transaction
     * @param timeout timeout of the connection
     */
-    ATParser(FileHandle &fh, const char *output_delimiter="\r", int buffer_size = 256, int timeout = 8000, bool debug = false) :
-        _fh(&fh),
+    ATParser(FileHandle *fh, const char *output_delimiter="\r", int buffer_size = 256, int timeout = 8000, bool debug = false) :
+        _fh(fh),
         _buffer_size(buffer_size),
         _in_prev(0),
         _oobs(NULL) {
