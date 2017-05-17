@@ -1,0 +1,8 @@
+{
+    "name": "ublox-cell-gen-drv-at-data", 
+    "target_overrides": {
+        "*": {
+            "target.features_add": ["COMMON_PAL"]
+        }
+    }
+}

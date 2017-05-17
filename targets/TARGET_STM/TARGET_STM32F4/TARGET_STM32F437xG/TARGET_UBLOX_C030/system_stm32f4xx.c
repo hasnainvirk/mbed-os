@@ -78,6 +78,7 @@
   */
 
 
+#include "ublox_low_level_api.h"
 #include "stm32f4xx.h"
 #include "hal_tick.h"
 
@@ -232,7 +233,10 @@ void SystemInit(void)
   
   /* Reset the timer to avoid issues after the RAM initialization */
   TIM_MST_RESET_ON;
-  TIM_MST_RESET_OFF;  
+  TIM_MST_RESET_OFF;
+
+  // Initialise the board
+  ublox_board_init();
 }
 
 /**

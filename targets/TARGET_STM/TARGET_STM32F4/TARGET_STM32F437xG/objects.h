@@ -75,6 +75,10 @@ struct can_s {
     int index;
 };
 
+struct modem_s {
+    uint32_t state;
+};
+
 #include "gpio_object.h"
 
 #ifdef __cplusplus
