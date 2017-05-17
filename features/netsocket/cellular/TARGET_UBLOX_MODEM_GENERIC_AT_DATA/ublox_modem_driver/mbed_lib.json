@@ -1,0 +1,8 @@
+{
+    "name": "ublox-at-cell", 
+    "target_overrides": {
+        "*": {
+            "target.features_add": ["COMMON_PAL"]
+        }
+    }
+}
