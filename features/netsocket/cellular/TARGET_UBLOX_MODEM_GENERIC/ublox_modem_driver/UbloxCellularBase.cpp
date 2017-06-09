@@ -16,7 +16,9 @@
 #include "UARTSerial.h"
 #include "APN_db.h"
 #include "UbloxCellularBase.h"
+#if MODEM_ON_BOARD
 #include "onboard_modem_api.h"
+#endif
 #if defined(FEATURE_COMMON_PAL)
 #include "mbed_trace.h"
 
@@ -347,6 +349,47 @@ void UbloxCellularBase::UMWI_URC()
 /**********************************************************************
  * PROTECTED METHODS
  **********************************************************************/
+#if MODEM_ON_BOARD
+void UbloxCellularBase::modem_init()
+{
+    ::onboard_modem_init();
+}
+
+void UbloxCellularBase::modem_deinit()
+{
+    ::onboard_modem_deinit();
+}
+
+void UbloxCellularBase::modem_power_up()
+{
+    ::onboard_modem_power_up();
+}
+
+void UbloxCellularBase::modem_power_down()
+{
+    ::onboard_modem_power_down();
+}
+#else
+void UbloxCellularBase::modem_init()
+{
+    //meant to be overridden
+}
+
+void UbloxCellularBase::modem_deinit()
+{
+    //meant to be overridden
+}
+
+void UbloxCellularBase::modem_power_up()
+{
+    //meant to be overridden
+}
+
+void UbloxCellularBase::modem_power_down()
+{
+    //meant to be overridden
+}
+#endif
 
 // Constructor.
 // Note: to allow this base class to be inherited as a virtual base class
@@ -461,12 +504,15 @@ bool UbloxCellularBase::power_up()
 
     /* Initialize GPIO lines */
     tr_info("Powering up modem...");
-    onboard_modem_init();
+
+    modem_init();
+
     /* Give modem a little time to settle down */
     wait_ms(250);
 
     for (int retry_count = 0; !success && (retry_count < 20); retry_count++) {
-        onboard_modem_power_up();
+
+        modem_power_up();
         wait_ms(500);
         // Modem tends to spit out noise during power up - don't confuse the parser
         _at->flush();
@@ -509,8 +555,8 @@ void UbloxCellularBase::power_down()
     }
 
     // Now do a hard power-off
-    onboard_modem_power_down();
-    onboard_modem_deinit();
+    modem_power_down();
+    modem_deinit();
 
     _dev_info.reg_status_csd = CSD_NOT_REGISTERED_NOT_SEARCHING;
     _dev_info.reg_status_psd = PSD_NOT_REGISTERED_NOT_SEARCHING;

@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-#include "cellular/onboard_modem_api.h"
 #include "nsapi_ppp.h"
 #include "utils/APN_db.h"
 #include "UbloxPPPCellularInterface.h"
@@ -67,7 +66,6 @@ bool UbloxPPPCellularInterface::set_atd()
 /**********************************************************************
  * PROTECTED METHODS
  **********************************************************************/
-
 // Gain access to the underlying network stack.
 NetworkStack *UbloxPPPCellularInterface::get_stack()
 {

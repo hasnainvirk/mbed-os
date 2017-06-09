@@ -345,6 +345,39 @@ private:
     void CGREG_URC();
     void CEREG_URC();
     void UMWI_URC();
+
+protected:
+
+    /** Sets the modem up for powering on
+     *
+     *  modem_init() is equivalent to plugging in the device, e.g., attaching power and serial port.
+     *  Uses onboard_modem_api.h where the implementation of onboard_modem_api is provided by the target.
+     */
+    virtual void modem_init();
+
+    /** Sets the modem in unplugged state
+     *
+     *  modem_deinit() will be equivalent to pulling the plug off of the device, i.e., detaching power
+     *  and serial port. This puts the modem in lowest power state.
+     *  Uses onboard_modem_api.h where the implementation of onboard_modem_api is provided by the target.
+     */
+    virtual void modem_deinit();
+
+    /** Powers up the modem
+     *
+     *  modem_power_up() is equivalent to pressing the soft power button.
+     *  The driver may repeat this if the modem is not responsive to AT commands.
+     *  Uses onboard_modem_api.h where the implementation of onboard_modem_api is provided by the target.
+     */
+    virtual void modem_power_up();
+
+    /** Powers down the modem
+     *
+     *  modem_power_down() is equivalent to turning off the modem by button press.
+     *  Uses onboard_modem_api.h where the implementation of onboard_modem_api is provided by the target.
+     */
+    virtual void modem_power_down();
+
 };
 
 #endif //_UBLOX_CELLULAR_DRIVER_GEN_BASE_
