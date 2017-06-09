@@ -19,7 +19,10 @@
 #ifndef LWIPOPTS_H
 #define LWIPOPTS_H
 
+// By default Ethernet support is on in LWIP
+#if MBED_CONF_LWIP_ETHERNET_ENABLED
 #include "lwipopts_conf.h"
+#endif
 
 // Workaround for Linux timeval
 #if defined (TOOLCHAIN_GCC)

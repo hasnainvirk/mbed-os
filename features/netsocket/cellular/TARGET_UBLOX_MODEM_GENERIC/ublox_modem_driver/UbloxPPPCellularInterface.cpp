@@ -66,7 +66,6 @@ bool UbloxPPPCellularInterface::set_atd()
 /**********************************************************************
  * PROTECTED METHODS
  **********************************************************************/
-
 // Gain access to the underlying network stack.
 NetworkStack *UbloxPPPCellularInterface::get_stack()
 {

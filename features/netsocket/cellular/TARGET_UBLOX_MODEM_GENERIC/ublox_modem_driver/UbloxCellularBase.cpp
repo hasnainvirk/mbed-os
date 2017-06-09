@@ -349,6 +349,47 @@ void UbloxCellularBase::UMWI_URC()
 /**********************************************************************
  * PROTECTED METHODS
  **********************************************************************/
+#if MODEM_ON_BOARD
+void UbloxCellularBase::modem_init()
+{
+    ::onboard_modem_init();
+}
+
+void UbloxCellularBase::modem_deinit()
+{
+    ::onboard_modem_deinit();
+}
+
+void UbloxCellularBase::modem_power_up()
+{
+    ::onboard_modem_power_up();
+}
+
+void UbloxCellularBase::modem_power_down()
+{
+    ::onboard_modem_power_down();
+}
+#else
+void UbloxCellularBase::modem_init()
+{
+    //meant to be overridden
+}
+
+void UbloxCellularBase::modem_deinit()
+{
+    //meant to be overridden
+}
+
+void UbloxCellularBase::modem_power_up()
+{
+    //meant to be overridden
+}
+
+void UbloxCellularBase::modem_power_down()
+{
+    //meant to be overridden
+}
+#endif
 
 // Constructor.
 // Note: to allow this base class to be inherited as a virtual base class
