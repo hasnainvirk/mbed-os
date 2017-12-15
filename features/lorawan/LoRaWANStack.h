@@ -65,11 +65,11 @@ public:
      */
     lora_mac_status_t initialize_mac_layer(events::EventQueue *queue);
 
-    /** Sets all callbacks of the LoRaWAN interface.
+    /** Sets all callbacks for the application.
      *
-     * @param *event_cb        An event structure representing all possible callbacks.
+     * \param callbacks        A pointer to the structure carrying callbacks.
      */
-    void set_lora_event_cb(mbed::Callback<void(lora_events_t)> event_cb);
+    void set_lora_callbacks(lorawan_app_callbacks_t *callbacks);
 
     /** Adds channels to use.
      *
@@ -267,6 +267,22 @@ public:
     int16_t handle_rx(const uint8_t port, uint8_t* data,
                       uint16_t length, uint8_t flags);
 
+    /** Send Link Check Request MAC command.
+     *
+     *
+     * This API schedules a Link Check Request command (LinkCheckReq) for the network
+     * server and once the response, i.e., LinkCheckAns MAC command is received
+     * from the Network Server, an event is generated.
+     *
+     * A callback function for the link check response must be set prior to using
+     * this API, otherwise a LORA_MAC_STATUS_PARAMETER_INVALID error is thrown.
+     *
+     * @return          LORA_MAC_STATUS_OK on successfully queuing a request, or
+     *                  a negative error code on failure.
+     *
+     */
+    lora_mac_status_t set_link_check_request();
+
     /** Shuts down the LoRaWAN protocol.
      *
      * In response to the user call for disconnection, the stack shuts down itself.
@@ -297,20 +313,9 @@ private:
     void set_device_state(device_states_t new_state);
 
     /**
-     * This function is used only for compliance testing
-     */
-    void prepare_special_tx_frame(uint8_t port);
-
-    /**
      * Hands over the packet to Mac layer by posting an MCPS request.
      */
     lora_mac_status_t send_frame_to_mac();
-
-    /**
-     * Callback function for transmission based on user defined timer.
-     * Used only for testing when duty cycle is off.
-     */
-    void on_tx_next_packet_timer_event(void);
 
     /**
      * Callback function for MCPS confirm. Mac layer calls this function once
@@ -332,6 +337,13 @@ private:
      * structure into stack layer data structure.
      */
     void mlme_confirm(MlmeConfirm_t *mlme_confirm);
+
+    /**
+     * Callback function for MLME indication. Mac layer calls this function once
+     * an MLME indication is received. This method translates Mac layer data
+     * structure into stack layer data structure.
+     */
+    void mlme_indication( MlmeIndication_t *mlmeIndication );
 
     /**
      * Handles an MLME request coming from the upper layers and delegates
@@ -395,6 +407,12 @@ private:
      */
     uint16_t check_possible_tx_size(uint16_t size);
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
+    /**
+     * This function is used only for compliance testing
+     */
+    void prepare_special_tx_frame(uint8_t port);
+
     /**
      * Used only for compliance testing
      */
@@ -404,15 +422,21 @@ private:
      * Used only for compliance testing
      */
     lora_mac_status_t send_compliance_test_frame_to_mac();
+#endif
 
     /**
      * converts error codes from Mac layer to controller layer
      */
     lora_mac_status_t error_type_converter(LoRaMacStatus_t type);
 
+    LoRaMac _loramac;
+
+#if defined(LORAWAN_COMPLIANCE_TEST)
     compliance_test_t _compliance_test;
+#endif
+
     device_states_t _device_current_state;
-    mbed::Callback<void(lora_events_t)> _events;
+    lorawan_app_callbacks_t _callbacks;
     radio_events_t *_mac_handlers;
     lorawan_session_t _lw_session;
     lora_mac_tx_message_t _tx_msg;

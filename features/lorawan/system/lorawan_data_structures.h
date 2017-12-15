@@ -219,6 +219,29 @@ typedef struct sRx2ChannelParams
 }Rx2ChannelParams_t;
 
 /*!
+ * LoRaMAC receive window enumeration
+ */
+typedef enum eLoRaMacRxSlot
+{
+    /*!
+     * LoRaMAC receive window 1
+     */
+    RX_SLOT_WIN_1,
+    /*!
+     * LoRaMAC receive window 2
+     */
+    RX_SLOT_WIN_2,
+    /*!
+     * LoRaMAC receive window 2 for class c - continuous listening
+     */
+    RX_SLOT_WIN_CLASS_C,
+    /*!
+     * LoRaMAC class b ping slot window
+     */
+    RX_SLOT_WIN_PING_SLOT
+}LoRaMacRxSlot_t;
+
+/*!
  * The global MAC layer parameters.
  */
 typedef struct sLoRaMacParams
@@ -290,6 +313,21 @@ typedef struct sLoRaMacParams
      * The antenna gain of the node.
      */
     float AntennaGain;
+
+    /*!
+     * Maximum duty cycle
+     * \remark Possibility to shutdown the device.
+     */
+    uint8_t MaxDCycle;
+    /*!
+     * Aggregated duty cycle management
+     */
+    uint16_t AggregatedDCycle;
+
+    /*!
+     * LoRaMac ADR control status
+     */
+    bool AdrCtrlOn;
 }LoRaMacParams_t;
 
 /*!
@@ -640,6 +678,10 @@ typedef union eLoRaMacFlags_t
          */
         uint8_t MlmeReq         : 1;
         /*!
+         * MLME-Ind pending
+         */
+        uint8_t MlmeInd         : 1;
+        /*!
          * MAC cycle done
          */
         uint8_t MacDone         : 1;
@@ -908,7 +950,7 @@ typedef struct sMcpsIndication
      *
      * [0: Rx window 1, 1: Rx window 2]
      */
-    uint8_t RxSlot;
+    LoRaMacRxSlot_t RxSlot;
     /*!
      * Set if an acknowledgement was received.
      */
@@ -925,11 +967,12 @@ typedef struct sMcpsIndication
  * \details The following table list the primitives supported by a
  *          specific MAC management service:
  *
- * Name                  | Request | Indication | Response | Confirm
- * --------------------- | :-----: | :--------: | :------: | :-----:
- * \ref MLME_JOIN        | YES     | NO         | NO       | YES
- * \ref MLME_LINK_CHECK  | YES     | NO         | NO       | YES
- * \ref MLME_TXCW        | YES     | NO         | NO       | YES
+ * Name                         | Request | Indication | Response | Confirm
+ * ---------------------------- | :-----: | :--------: | :------: | :-----:
+ * \ref MLME_JOIN               | YES     | NO         | NO       | YES
+ * \ref MLME_LINK_CHECK         | YES     | NO         | NO       | YES
+ * \ref MLME_TXCW               | YES     | NO         | NO       | YES
+ * \ref MLME_SCHEDULE_UPLINK    | NO      | YES        | NO       | NO
  *
  * The following table provides links to the function implementations of the
  * related MLME primitives.
@@ -938,6 +981,7 @@ typedef struct sMcpsIndication
  * ---------------- | :---------------------:
  * MLME-Request     | \ref LoRaMacMlmeRequest
  * MLME-Confirm     | MacMlmeConfirm in \ref LoRaMacPrimitives_t
+ * MLME-Indication  | MacMlmeIndication in \ref LoRaMacPrimitives_t
  */
 typedef enum eMlme
 {
@@ -965,6 +1009,11 @@ typedef enum eMlme
      * LoRaWAN end-device certification.
      */
     MLME_TXCW_1,
+    /*!
+     * Indicates that the application shall perform an uplink as
+     * soon as possible.
+     */
+    MLME_SCHEDULE_UPLINK
 }Mlme_t;
 
 /*!
@@ -1072,6 +1121,17 @@ typedef struct sMlmeConfirm
      */
     uint8_t NbRetries;
 }MlmeConfirm_t;
+
+/*!
+ * LoRaMAC MLME-Indication primitive
+ */
+typedef struct sMlmeIndication
+{
+    /*!
+     * MLME-Indication type
+     */
+    Mlme_t MlmeIndication;
+}MlmeIndication_t;
 
 /*!
  * LoRa MAC Information Base (MIB).
@@ -1618,6 +1678,13 @@ typedef struct sLoRaMacPrimitives
      * \param   [OUT] MLME-Confirm parameters.
      */
     mbed::Callback<void(MlmeConfirm_t*)> MacMlmeConfirm;
+
+    /*!
+     * \brief   MLME-Indication primitive
+     *
+     * \param   [OUT] MLME-Indication parameters
+     */
+    mbed::Callback<void(MlmeIndication_t*)> MacMlmeIndication;
 }LoRaMacPrimitives_t;
 
 /*!
@@ -1635,7 +1702,6 @@ typedef struct sLoRaMacCallback
      */
     uint8_t ( *GetBatteryLevel )( void );
 
-    mbed::Callback<void()> TxNextPacketTimerEvent;
 }LoRaMacCallback_t;
 
 /**
@@ -1823,7 +1889,9 @@ typedef enum device_states {
     DEVICE_STATE_JOINED,
     DEVICE_STATE_SEND,
     DEVICE_STATE_IDLE,
+#if defined(LORAWAN_COMPLIANCE_TEST)
     DEVICE_STATE_COMPLIANCE_TEST,
+#endif
     DEVICE_STATE_SHUTDOWN
 } device_states_t;
 
@@ -2067,7 +2135,9 @@ typedef enum lora_mac_status {
     LORA_MAC_STATUS_CONNECT_IN_PROGRESS = -1016,    /**< Services started - Connection in progress */
     LORA_MAC_STATUS_NO_ACTIVE_SESSIONS = -1017,            /**< Services not started - No active session */
     LORA_MAC_STATUS_IDLE = -1018,                   /**< Services started - Idle at the moment */
-    LORA_MAC_STATUS_COMPLIANCE_TEST_ON = -1019         /**< Compliance test - is on-going */
+#if defined(LORAWAN_COMPLIANCE_TEST)
+    LORA_MAC_STATUS_COMPLIANCE_TEST_ON = -1019,         /**< Compliance test - is on-going */
+#endif
 } lora_mac_status_t;
 
 /**
@@ -2757,6 +2827,7 @@ typedef struct lora_mac_mib_request_confirm {
     lora_mac_mib_param_t param;
 } lora_mac_mib_request_confirm_t;
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
 /**  LoRaWAN compliance tests support data
  *
  */
@@ -2802,6 +2873,7 @@ typedef struct compliance_test {
      */
     uint8_t nb_gateways;
 } compliance_test_t;
+#endif
 
 /** Structure containing the uplink status
  *
@@ -2883,6 +2955,18 @@ typedef enum lora_events {
     RX_ERROR,
     JOIN_FAILURE,
 } lora_events_t;
+
+typedef struct  {
+     // Mandatory. Event Callback must be provided
+     mbed::Callback<void(lora_events_t)> events;
+
+     // Rest are optional
+     // If the user do not assign these callbacks, these callbacks would return
+     // null if checked with bool operator
+     // link_check_resp callback and other such callbacks will be maped in
+     // future releases of Mbed-OS
+     mbed::Callback<void(uint8_t, uint8_t)> link_check_resp;
+ }lorawan_app_callbacks_t;
 
 typedef struct lora_channelplan {
     uint8_t nb_channels;    // number of channels
