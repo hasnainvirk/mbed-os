@@ -1079,6 +1079,12 @@ void LoRaWANStack::mlme_confirm_handler(lora_mac_mlme_confirm_t *mlme_confirm)
                     _compliance_test.link_check = true;
                     _compliance_test.demod_margin = mlme_confirm->demod_margin;
                     _compliance_test.nb_gateways = mlme_confirm->nb_gateways;
+                } else {
+                    // normal operation as oppose to compliance testing
+                    if (_callbacks.link_check_resp) {
+                        _queue->call(_callbacks.link_check_resp, mlme_confirm->demod_margin,
+                                 mlme_confirm->nb_gateways);
+                    }
                 }
             }
             break;
@@ -1793,6 +1799,19 @@ lora_mac_status_t LoRaWANStack::error_type_converter(LoRaMacStatus_t type)
             return LORA_MAC_STATUS_SERVICE_UNKNOWN;
             break;
     }
+}
+
+lora_mac_status_t LoRaWANStack::set_link_check_request()
+{
+    if (!_callbacks.link_check_resp) {
+        tr_error("Must assign a callback function for link check request. ");
+        return LORA_MAC_STATUS_PARAMETER_INVALID;
+    }
+
+    lora_mac_mlme_req_t mlme_req;
+
+    mlme_req.type = LORA_MLME_LINK_CHECK;
+    return mlme_request_handler(&mlme_req);
 }
 
 void LoRaWANStack::shutdown()
