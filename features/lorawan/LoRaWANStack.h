@@ -267,6 +267,22 @@ public:
     int16_t handle_rx(const uint8_t port, uint8_t* data,
                       uint16_t length, uint8_t flags);
 
+    /** Send Link Check Request MAC command.
+     *
+     *
+     * This API schedules a Link Check Request command (LinkCheckReq) for the network
+     * server and once the response, i.e., LinkCheckAns MAC command is received
+     * from the Network Server, an event is generated.
+     *
+     * A callback function for the link check response must be set prior to using
+     * this API, otherwise a LORA_MAC_STATUS_PARAMETER_INVALID error is thrown.
+     *
+     * @return          LORA_MAC_STATUS_OK on successfully queuing a request, or
+     *                  a negative error code on failure.
+     *
+     */
+    lora_mac_status_t set_link_check_request();
+
     /** Shuts down the LoRaWAN protocol.
      *
      * In response to the user call for disconnection, the stack shuts down itself.
