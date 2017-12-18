@@ -2556,7 +2556,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacMlmeRequest( MlmeReq_t *mlmeRequest )
         case MLME_LINK_CHECK:
         {
             LoRaMacFlags.Bits.MlmeReq = 1;
-            // LoRaMac will send this command piggy-pack
+            // LoRaMac will send this command piggy-backed
             MlmeConfirm.MlmeRequest = mlmeRequest->Type;
 
             status = mac_commands.AddMacCommand( MOTE_MAC_LINK_CHECK_REQ, 0, 0 );
