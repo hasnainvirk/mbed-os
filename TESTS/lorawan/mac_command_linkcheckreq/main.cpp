@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-//TODO Fix this test case
+
 #include "utest/utest.h"
 #include "unity/unity.h"
 #include "greentea-client/test_env.h"
@@ -161,8 +161,7 @@ static bool link_check_response;
 
 void lora_send_MAC_command_linkcheckreq()
 {
-    uint8_t rx_data[64] = { 0 };
-    uint8_t tx_data[] = { 0x02 };     //CID of LinkCheckReq MAC command
+    uint8_t tx_data[] = { 0x02 }; // just some data
     uint8_t counter = 0;
     int16_t ret = 0;
 
@@ -189,32 +188,13 @@ void lora_send_MAC_command_linkcheckreq()
         counter++;
     }
 
+    // set a link check request command
+    ret = lorawan.add_link_check_request();
 
     // Reset timeout counter
     counter = 0;
 
-    ret = lorawan.send(0, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
-
-    if (ret != sizeof(tx_data)) {
-        TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
-        return;
-    }
-
-    while (1) {
-        // Wait for TX_DONE event
-        if (lora_helper.find_event(TX_DONE)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Send timeout");
-            return;
-        }
-
-        wait_ms(1000);
-        counter++;
-    }
+    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     // Reset timeout counter
     counter = 0;
@@ -225,13 +205,14 @@ void lora_send_MAC_command_linkcheckreq()
         }
 
         // Fail on timeout
-        if (counter >= 60) {
+        if (counter >= 120) {
             TEST_ASSERT_MESSAGE(false, "Did not get link check response");
             return;
         }
 
         wait_ms(1000);
         counter++;
+        lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     }
 
     // Test passed
@@ -255,9 +236,7 @@ static lorawan_app_callbacks_t callbacks;
 
 static void link_check_response_handler(uint8_t demod_margin, uint8_t gw_count)
 {
-    if (gw_count >= 1) {
         link_check_response = true;
-    }
 }
 
 int main() {
