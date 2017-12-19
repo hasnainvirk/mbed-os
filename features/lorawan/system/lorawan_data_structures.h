@@ -290,6 +290,21 @@ typedef struct sLoRaMacParams
      * The antenna gain of the node.
      */
     float AntennaGain;
+
+    /*!
+     * Maximum duty cycle
+     * \remark Possibility to shutdown the device.
+     */
+    uint8_t MaxDCycle;
+    /*!
+     * Aggregated duty cycle management
+     */
+    uint16_t AggregatedDCycle;
+
+    /*!
+     * LoRaMac ADR control status
+     */
+    bool AdrCtrlOn;
 }LoRaMacParams_t;
 
 /*!
