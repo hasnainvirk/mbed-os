@@ -23,7 +23,6 @@ SPDX-License-Identifier: BSD-3-Clause
 */
 #include <stdlib.h>
 #include "events/EventQueue.h"
-#include "rtos/Thread.h"
 #include "LoRaMac.h"
 #include "LoRaMacCrypto.h"
 
@@ -49,11 +48,6 @@ static EventQueue *ev_queue;
  * Static handle to LoRaMac object. This is needed for static callback methods.
  */
 static LoRaMac* isrHandler = NULL;
-
-/*!
- * LoRaMAC max EIRP (dBm) table.
- */
-static const uint8_t LoRaMacMaxEirpTable[] = { 8, 10, 12, 13, 14, 16, 18, 20, 21, 24, 26, 27, 29, 30, 33, 36 };
 
 /*!
  * Maximum length of the fOpts field
@@ -125,19 +119,14 @@ LoRaMac::LoRaMac()
     IsUpLinkCounterFixed = false;
     IsRxWindowsEnabled = true;
     IsLoRaMacNetworkJoined = false;
-    AdrCtrlOn = false;
+    LoRaMacParams.AdrCtrlOn = false;
     AdrAckCounter = 0;
     NodeAckRequested = false;
     SrvAckRequested = false;
-    MacCommandsInNextTx = false;
-    MacCommandsBufferIndex = 0;
-    MacCommandsBufferToRepeatIndex = 0;
-    //uint8_t MacCommandsBuffer[LORA_MAC_COMMAND_MAX_LENGTH];
-    //uint8_t MacCommandsBufferToRepeat[LORA_MAC_COMMAND_MAX_LENGTH];
     //LoRaMacParams_t LoRaMacParams;
     //LoRaMacParams_t LoRaMacParamsDefaults;
     ChannelsNbRepCounter = 0;
-    MaxDCycle = 0;
+    LoRaMacParams.MaxDCycle = 0;
     //uint16_t AggregatedDCycle;
     //TimerTime_t AggregatedLastTxDoneTime;
     //TimerTime_t AggregatedTimeOff;
@@ -573,7 +562,7 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                     McpsConfirm.Status = LORAMAC_EVENT_INFO_STATUS_OK;
 
                     AdrAckCounter = 0;
-                    MacCommandsBufferToRepeatIndex = 0;
+                    mac_commands.ClearRepeatBuffer();
 
                     // Update 32 bits downlink counter
                     if( multicast == 1 )
@@ -633,12 +622,12 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                     {
                         if( fCtrl.Bits.Ack == 1 )
                         {// Reset MacCommandsBufferIndex when we have received an ACK.
-                            MacCommandsBufferIndex = 0;
+                            mac_commands.ClearCommandBuffer();
                         }
                     }
                     else
                     {// Reset the variable if we have received any valid frame.
-                        MacCommandsBufferIndex = 0;
+                        mac_commands.ClearCommandBuffer();
                     }
 
                     // Process payload and MAC commands
@@ -665,7 +654,9 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                                 }
 
                                 // Decode frame payload MAC commands
-                                ProcessMacCommands( LoRaMacRxPayload, 0, frameLen, snr );
+                                mac_commands.ProcessMacCommands( LoRaMacRxPayload, 0, frameLen, snr,
+                                                                 MlmeConfirm, LoRaMacCallbacks,
+                                                                 LoRaMacParams, *lora_phy );
                             }
                             else
                             {
@@ -677,7 +668,9 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                             if( fCtrl.Bits.FOptsLen > 0 )
                             {
                                 // Decode Options field MAC commands. Omit the fPort.
-                                ProcessMacCommands( payload, 8, appPayloadStartIndex - 1, snr );
+                                mac_commands.ProcessMacCommands( payload, 8, appPayloadStartIndex - 1, snr,
+                                                                 MlmeConfirm, LoRaMacCallbacks,
+                                                                 LoRaMacParams, *lora_phy );
                             }
 
                             if (0 != LoRaMacPayloadDecrypt( payload + appPayloadStartIndex,
@@ -703,7 +696,9 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                         if( fCtrl.Bits.FOptsLen > 0 )
                         {
                             // Decode Options field MAC commands
-                            ProcessMacCommands( payload, 8, appPayloadStartIndex, snr );
+                            mac_commands.ProcessMacCommands( payload, 8, appPayloadStartIndex, snr,
+                                                             MlmeConfirm, LoRaMacCallbacks,
+                                                             LoRaMacParams, *lora_phy );
                         }
                     }
 
@@ -885,7 +880,7 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
             {
                 // Stop transmit cycle due to tx timeout.
                 LoRaMacState &= ~LORAMAC_TX_RUNNING;
-                MacCommandsBufferIndex = 0;
+                mac_commands.ClearCommandBuffer();
                 McpsConfirm.NbRetries = AckTimeoutRetriesCounter;
                 McpsConfirm.AckReceived = false;
                 McpsConfirm.TxTimeOnAir = 0;
@@ -928,7 +923,7 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
                         if( LoRaMacFlags.Bits.McpsInd == 0 )
                         {   // Maximum repetitions without downlink. Reset MacCommandsBufferIndex. Increase ADR Ack counter.
                             // Only process the case when the MAC did not receive a downlink.
-                            MacCommandsBufferIndex = 0;
+                            mac_commands.ClearCommandBuffer();
                             AdrAckCounter++;
                         }
 
@@ -992,7 +987,7 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
                     // The DR is not applicable for the payload size
                     McpsConfirm.Status = LORAMAC_EVENT_INFO_STATUS_TX_DR_PAYLOAD_SIZE_ERROR;
 
-                    MacCommandsBufferIndex = 0;
+                    mac_commands.ClearCommandBuffer();
                     LoRaMacState &= ~LORAMAC_TX_RUNNING;
                     NodeAckRequested = false;
                     McpsConfirm.AckReceived = false;
@@ -1010,7 +1005,7 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
 
                 LoRaMacState &= ~LORAMAC_TX_RUNNING;
 
-                MacCommandsBufferIndex = 0;
+                mac_commands.ClearCommandBuffer();
                 NodeAckRequested = false;
                 McpsConfirm.AckReceived = false;
                 McpsConfirm.NbRetries = AckTimeoutRetriesCounter;
@@ -1100,7 +1095,7 @@ void LoRaMac::OnTxDelayedTimerEvent( void )
         macHdr.Bits.MType = FRAME_TYPE_JOIN_REQ;
 
         fCtrl.Value = 0;
-        fCtrl.Bits.Adr = AdrCtrlOn;
+        fCtrl.Bits.Adr = LoRaMacParams.AdrCtrlOn;
 
         /* In case of join request retransmissions, the stack must prepare
          * the frame again, because the network server keeps track of the random
@@ -1209,336 +1204,6 @@ bool LoRaMac::ValidatePayloadLength( uint8_t lenN, int8_t datarate, uint8_t fOpt
     return false;
 }
 
-LoRaMacStatus_t LoRaMac::AddMacCommand( uint8_t cmd, uint8_t p1, uint8_t p2 )
-{
-    LoRaMacStatus_t status = LORAMAC_STATUS_BUSY;
-    // The maximum buffer length must take MAC commands to re-send into account.
-    uint8_t bufLen = LORA_MAC_COMMAND_MAX_LENGTH - MacCommandsBufferToRepeatIndex;
-
-    switch( cmd )
-    {
-        case MOTE_MAC_LINK_CHECK_REQ:
-            if( MacCommandsBufferIndex < bufLen )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // No payload for this command
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        case MOTE_MAC_LINK_ADR_ANS:
-            if( MacCommandsBufferIndex < ( bufLen - 1 ) )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // Margin
-                MacCommandsBuffer[MacCommandsBufferIndex++] = p1;
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        case MOTE_MAC_DUTY_CYCLE_ANS:
-            if( MacCommandsBufferIndex < bufLen )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // No payload for this answer
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        case MOTE_MAC_RX_PARAM_SETUP_ANS:
-            if( MacCommandsBufferIndex < ( bufLen - 1 ) )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // Status: Datarate ACK, Channel ACK
-                MacCommandsBuffer[MacCommandsBufferIndex++] = p1;
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        case MOTE_MAC_DEV_STATUS_ANS:
-            if( MacCommandsBufferIndex < ( bufLen - 2 ) )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // 1st byte Battery
-                // 2nd byte Margin
-                MacCommandsBuffer[MacCommandsBufferIndex++] = p1;
-                MacCommandsBuffer[MacCommandsBufferIndex++] = p2;
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        case MOTE_MAC_NEW_CHANNEL_ANS:
-            if( MacCommandsBufferIndex < ( bufLen - 1 ) )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // Status: Datarate range OK, Channel frequency OK
-                MacCommandsBuffer[MacCommandsBufferIndex++] = p1;
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        case MOTE_MAC_RX_TIMING_SETUP_ANS:
-            if( MacCommandsBufferIndex < bufLen )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // No payload for this answer
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        case MOTE_MAC_TX_PARAM_SETUP_ANS:
-            if( MacCommandsBufferIndex < bufLen )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // No payload for this answer
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        case MOTE_MAC_DL_CHANNEL_ANS:
-            if( MacCommandsBufferIndex < bufLen )
-            {
-                MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
-                // Status: Uplink frequency exists, Channel frequency OK
-                MacCommandsBuffer[MacCommandsBufferIndex++] = p1;
-                status = LORAMAC_STATUS_OK;
-            }
-            break;
-        default:
-            return LORAMAC_STATUS_SERVICE_UNKNOWN;
-    }
-    if( status == LORAMAC_STATUS_OK )
-    {
-        MacCommandsInNextTx = true;
-    }
-    return status;
-}
-
-uint8_t LoRaMac::ParseMacCommandsToRepeat( uint8_t* cmdBufIn, uint8_t length, uint8_t* cmdBufOut )
-{
-    uint8_t i = 0;
-    uint8_t cmdCount = 0;
-
-    if( ( cmdBufIn == NULL ) || ( cmdBufOut == NULL ) )
-    {
-        return 0;
-    }
-
-    for( i = 0; i < length; i++ )
-    {
-        switch( cmdBufIn[i] )
-        {
-            // STICKY
-            case MOTE_MAC_DL_CHANNEL_ANS:
-            case MOTE_MAC_RX_PARAM_SETUP_ANS:
-            { // 1 byte payload
-                cmdBufOut[cmdCount++] = cmdBufIn[i++];
-                cmdBufOut[cmdCount++] = cmdBufIn[i];
-                break;
-            }
-            case MOTE_MAC_RX_TIMING_SETUP_ANS:
-            { // 0 byte payload
-                cmdBufOut[cmdCount++] = cmdBufIn[i];
-                break;
-            }
-            // NON-STICKY
-            case MOTE_MAC_DEV_STATUS_ANS:
-            { // 2 bytes payload
-                i += 2;
-                break;
-            }
-            case MOTE_MAC_LINK_ADR_ANS:
-            case MOTE_MAC_NEW_CHANNEL_ANS:
-            { // 1 byte payload
-                i++;
-                break;
-            }
-            case MOTE_MAC_TX_PARAM_SETUP_ANS:
-            case MOTE_MAC_DUTY_CYCLE_ANS:
-            case MOTE_MAC_LINK_CHECK_REQ:
-            { // 0 byte payload
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
-    return cmdCount;
-}
-
-void LoRaMac::ProcessMacCommands( uint8_t *payload, uint8_t macIndex, uint8_t commandsSize, uint8_t snr )
-{
-    uint8_t status = 0;
-
-    while( macIndex < commandsSize )
-    {
-        // Decode Frame MAC commands
-        switch( payload[macIndex++] )
-        {
-            case SRV_MAC_LINK_CHECK_ANS:
-                MlmeConfirm.Status = LORAMAC_EVENT_INFO_STATUS_OK;
-                MlmeConfirm.DemodMargin = payload[macIndex++];
-                MlmeConfirm.NbGateways = payload[macIndex++];
-                break;
-            case SRV_MAC_LINK_ADR_REQ:
-                {
-                    LinkAdrReqParams_t linkAdrReq;
-                    int8_t linkAdrDatarate = DR_0;
-                    int8_t linkAdrTxPower = TX_POWER_0;
-                    uint8_t linkAdrNbRep = 0;
-                    uint8_t linkAdrNbBytesParsed = 0;
-
-                    // Fill parameter structure
-                    linkAdrReq.Payload = &payload[macIndex - 1];
-                    linkAdrReq.PayloadSize = commandsSize - ( macIndex - 1 );
-                    linkAdrReq.AdrEnabled = AdrCtrlOn;
-                    linkAdrReq.UplinkDwellTime = LoRaMacParams.UplinkDwellTime;
-                    linkAdrReq.CurrentDatarate = LoRaMacParams.ChannelsDatarate;
-                    linkAdrReq.CurrentTxPower = LoRaMacParams.ChannelsTxPower;
-                    linkAdrReq.CurrentNbRep = LoRaMacParams.ChannelsNbRep;
-
-                    // Process the ADR requests
-                    status = lora_phy->link_ADR_request(&linkAdrReq, &linkAdrDatarate,
-                                               &linkAdrTxPower, &linkAdrNbRep,
-                                               &linkAdrNbBytesParsed);
-
-                    if( ( status & 0x07 ) == 0x07 )
-                    {
-                        LoRaMacParams.ChannelsDatarate = linkAdrDatarate;
-                        LoRaMacParams.ChannelsTxPower = linkAdrTxPower;
-                        LoRaMacParams.ChannelsNbRep = linkAdrNbRep;
-                    }
-
-                    // Add the answers to the buffer
-                    for( uint8_t i = 0; i < ( linkAdrNbBytesParsed / 5 ); i++ )
-                    {
-                        AddMacCommand( MOTE_MAC_LINK_ADR_ANS, status, 0 );
-                    }
-                    // Update MAC index
-                    macIndex += linkAdrNbBytesParsed - 1;
-                }
-                break;
-            case SRV_MAC_DUTY_CYCLE_REQ:
-                MaxDCycle = payload[macIndex++];
-                AggregatedDCycle = 1 << MaxDCycle;
-                AddMacCommand( MOTE_MAC_DUTY_CYCLE_ANS, 0, 0 );
-                break;
-            case SRV_MAC_RX_PARAM_SETUP_REQ:
-                {
-                    RxParamSetupReqParams_t rxParamSetupReq;
-                    status = 0x07;
-
-                    rxParamSetupReq.DrOffset = ( payload[macIndex] >> 4 ) & 0x07;
-                    rxParamSetupReq.Datarate = payload[macIndex] & 0x0F;
-                    macIndex++;
-
-                    rxParamSetupReq.Frequency =  ( uint32_t )payload[macIndex++];
-                    rxParamSetupReq.Frequency |= ( uint32_t )payload[macIndex++] << 8;
-                    rxParamSetupReq.Frequency |= ( uint32_t )payload[macIndex++] << 16;
-                    rxParamSetupReq.Frequency *= 100;
-
-                    // Perform request on region
-                    status = lora_phy->setup_rx_params(&rxParamSetupReq);
-
-                    if( ( status & 0x07 ) == 0x07 )
-                    {
-                        LoRaMacParams.Rx2Channel.Datarate = rxParamSetupReq.Datarate;
-                        LoRaMacParams.Rx2Channel.Frequency = rxParamSetupReq.Frequency;
-                        LoRaMacParams.Rx1DrOffset = rxParamSetupReq.DrOffset;
-                    }
-                    AddMacCommand( MOTE_MAC_RX_PARAM_SETUP_ANS, status, 0 );
-                }
-                break;
-            case SRV_MAC_DEV_STATUS_REQ:
-                {
-                    uint8_t batteryLevel = BAT_LEVEL_NO_MEASURE;
-                    if( ( LoRaMacCallbacks != NULL ) && ( LoRaMacCallbacks->GetBatteryLevel != NULL ) )
-                    {
-                        batteryLevel = LoRaMacCallbacks->GetBatteryLevel( );
-                    }
-                    AddMacCommand( MOTE_MAC_DEV_STATUS_ANS, batteryLevel, snr );
-                    break;
-                }
-            case SRV_MAC_NEW_CHANNEL_REQ:
-                {
-                    NewChannelReqParams_t newChannelReq;
-                    ChannelParams_t chParam;
-                    status = 0x03;
-
-                    newChannelReq.ChannelId = payload[macIndex++];
-                    newChannelReq.NewChannel = &chParam;
-
-                    chParam.Frequency = ( uint32_t )payload[macIndex++];
-                    chParam.Frequency |= ( uint32_t )payload[macIndex++] << 8;
-                    chParam.Frequency |= ( uint32_t )payload[macIndex++] << 16;
-                    chParam.Frequency *= 100;
-                    chParam.Rx1Frequency = 0;
-                    chParam.DrRange.Value = payload[macIndex++];
-
-                    status = lora_phy->request_new_channel(&newChannelReq);
-
-                    AddMacCommand( MOTE_MAC_NEW_CHANNEL_ANS, status, 0 );
-                }
-                break;
-            case SRV_MAC_RX_TIMING_SETUP_REQ:
-                {
-                    uint8_t delay = payload[macIndex++] & 0x0F;
-
-                    if( delay == 0 )
-                    {
-                        delay++;
-                    }
-                    LoRaMacParams.ReceiveDelay1 = delay * 1000;
-                    LoRaMacParams.ReceiveDelay2 = LoRaMacParams.ReceiveDelay1 + 1000;
-                    AddMacCommand( MOTE_MAC_RX_TIMING_SETUP_ANS, 0, 0 );
-                }
-                break;
-            case SRV_MAC_TX_PARAM_SETUP_REQ:
-                {
-                    TxParamSetupReqParams_t txParamSetupReq;
-                    uint8_t eirpDwellTime = payload[macIndex++];
-
-                    txParamSetupReq.UplinkDwellTime = 0;
-                    txParamSetupReq.DownlinkDwellTime = 0;
-
-                    if( ( eirpDwellTime & 0x20 ) == 0x20 )
-                    {
-                        txParamSetupReq.DownlinkDwellTime = 1;
-                    }
-                    if( ( eirpDwellTime & 0x10 ) == 0x10 )
-                    {
-                        txParamSetupReq.UplinkDwellTime = 1;
-                    }
-                    txParamSetupReq.MaxEirp = eirpDwellTime & 0x0F;
-
-                    // Check the status for correctness
-                    if( lora_phy->setup_tx_params(&txParamSetupReq ) != -1 )
-                    {
-                        // Accept command
-                        LoRaMacParams.UplinkDwellTime = txParamSetupReq.UplinkDwellTime;
-                        LoRaMacParams.DownlinkDwellTime = txParamSetupReq.DownlinkDwellTime;
-                        LoRaMacParams.MaxEirp = LoRaMacMaxEirpTable[txParamSetupReq.MaxEirp];
-                        // Add command response
-                        AddMacCommand( MOTE_MAC_TX_PARAM_SETUP_ANS, 0, 0 );
-                    }
-                }
-                break;
-            case SRV_MAC_DL_CHANNEL_REQ:
-                {
-                    DlChannelReqParams_t dlChannelReq;
-                    status = 0x03;
-
-                    dlChannelReq.ChannelId = payload[macIndex++];
-                    dlChannelReq.Rx1Frequency = ( uint32_t )payload[macIndex++];
-                    dlChannelReq.Rx1Frequency |= ( uint32_t )payload[macIndex++] << 8;
-                    dlChannelReq.Rx1Frequency |= ( uint32_t )payload[macIndex++] << 16;
-                    dlChannelReq.Rx1Frequency *= 100;
-
-                    status = lora_phy->dl_channel_request(&dlChannelReq);
-
-                    AddMacCommand( MOTE_MAC_DL_CHANNEL_ANS, status, 0 );
-                }
-                break;
-            default:
-                // Unknown command. ABORT MAC commands processing
-                return;
-        }
-    }
-}
-
 // This is not actual transmission. It just schedules a message in response
 // to MCPS request
 LoRaMacStatus_t LoRaMac::Send( LoRaMacHeader_t *macHdr, uint8_t fPort, void *fBuffer, uint16_t fBufferSize )
@@ -1551,7 +1216,7 @@ LoRaMacStatus_t LoRaMac::Send( LoRaMacHeader_t *macHdr, uint8_t fPort, void *fBu
     fCtrl.Bits.FPending      = 0;
     fCtrl.Bits.Ack           = false;
     fCtrl.Bits.AdrAckReq     = false;
-    fCtrl.Bits.Adr           = AdrCtrlOn;
+    fCtrl.Bits.Adr           = LoRaMacParams.AdrCtrlOn;
 
     // Prepare the frame
     status = PrepareFrame( macHdr, &fCtrl, fPort, fBuffer, fBufferSize );
@@ -1578,11 +1243,11 @@ LoRaMacStatus_t LoRaMac::ScheduleTx( void )
     NextChanParams_t nextChan;
 
     // Check if the device is off
-    if( MaxDCycle == 255 )
+    if( LoRaMacParams.MaxDCycle == 255 )
     {
         return LORAMAC_STATUS_DEVICE_OFF;
     }
-    if( MaxDCycle == 0 )
+    if( LoRaMacParams.MaxDCycle == 0 )
     {
         AggregatedTimeOff = 0;
     }
@@ -1629,7 +1294,7 @@ LoRaMacStatus_t LoRaMac::ScheduleTx( void )
     }
     else
     {
-        if( ValidatePayloadLength( LoRaMacTxPayloadLen, LoRaMacParams.ChannelsDatarate, MacCommandsBufferIndex ) == false )
+        if( ValidatePayloadLength( LoRaMacTxPayloadLen, LoRaMacParams.ChannelsDatarate, mac_commands.GetLength() ) == false )
         {
             return LORAMAC_STATUS_LENGTH_ERROR;
         }
@@ -1672,7 +1337,7 @@ void LoRaMac::CalculateBackOff( uint8_t channel )
     lora_phy->calculate_backoff(&calcBackOff);
 
     // Update aggregated time-off
-    AggregatedTimeOff = AggregatedTimeOff + ( TxTimeOnAir * AggregatedDCycle - TxTimeOnAir );
+    AggregatedTimeOff = AggregatedTimeOff + ( TxTimeOnAir * LoRaMacParams.AggregatedDCycle - TxTimeOnAir );
 }
 
 void LoRaMac::ResetMacParameters( void )
@@ -1690,11 +1355,12 @@ void LoRaMac::ResetMacParameters( void )
     AckTimeoutRetriesCounter = 1;
     AckTimeoutRetry = false;
 
-    MaxDCycle = 0;
-    AggregatedDCycle = 1;
+    LoRaMacParams.MaxDCycle = 0;
+    LoRaMacParams.AggregatedDCycle = 1;
 
-    MacCommandsBufferIndex = 0;
-    MacCommandsBufferToRepeatIndex = 0;
+    mac_commands.ClearCommandBuffer();
+    mac_commands.ClearRepeatBuffer();
+    mac_commands.ClearMacCommandsInNextTx();
 
     IsRxWindowsEnabled = true;
 
@@ -1709,7 +1375,6 @@ void LoRaMac::ResetMacParameters( void )
 
     NodeAckRequested = false;
     SrvAckRequested = false;
-    MacCommandsInNextTx = false;
 
     // Reset Multicast downlink counters
     MulticastParams_t *cur = MulticastChannels;
@@ -1785,6 +1450,7 @@ LoRaMacStatus_t LoRaMac::PrepareFrame( LoRaMacHeader_t *macHdr, LoRaMacFrameCtrl
             NodeAckRequested = true;
             //Intentional fallthrough
         case FRAME_TYPE_DATA_UNCONFIRMED_UP:
+        {
             if( IsLoRaMacNetworkJoined == false )
             {
                 return LORAMAC_STATUS_NO_NETWORK_JOINED; // No network has been joined yet
@@ -1820,48 +1486,46 @@ LoRaMacStatus_t LoRaMac::PrepareFrame( LoRaMacHeader_t *macHdr, LoRaMacFrameCtrl
             LoRaMacBuffer[pktHeaderLen++] = ( UpLinkCounter >> 8 ) & 0xFF;
 
             // Copy the MAC commands which must be re-send into the MAC command buffer
-            memcpy( &MacCommandsBuffer[MacCommandsBufferIndex], MacCommandsBufferToRepeat, MacCommandsBufferToRepeatIndex );
-            MacCommandsBufferIndex += MacCommandsBufferToRepeatIndex;
+            mac_commands.CopyRepeatCommandsToBuffer();
 
+            const uint8_t mac_commands_len = mac_commands.GetLength();
             if( ( payload != NULL ) && ( LoRaMacTxPayloadLen > 0 ) )
             {
-                if( MacCommandsInNextTx == true )
+                if( mac_commands.IsMacCommandsInNextTx() == true )
                 {
-                    if( MacCommandsBufferIndex <= LORA_MAC_COMMAND_MAX_FOPTS_LENGTH )
+                    if( mac_commands_len <= LORA_MAC_COMMAND_MAX_FOPTS_LENGTH )
                     {
-                        fCtrl->Bits.FOptsLen += MacCommandsBufferIndex;
+                        fCtrl->Bits.FOptsLen += mac_commands_len;
 
                         // Update FCtrl field with new value of OptionsLength
                         LoRaMacBuffer[0x05] = fCtrl->Value;
-                        for( i = 0; i < MacCommandsBufferIndex; i++ )
+
+                        const uint8_t *buffer = mac_commands.GetMacCommandsBuffer();
+                        for( i = 0; i < mac_commands_len; i++ )
                         {
-                            LoRaMacBuffer[pktHeaderLen++] = MacCommandsBuffer[i];
+                            LoRaMacBuffer[pktHeaderLen++] = buffer[i];
                         }
                     }
                     else
                     {
-                        LoRaMacTxPayloadLen = MacCommandsBufferIndex;
-                        payload = MacCommandsBuffer;
+                        LoRaMacTxPayloadLen = mac_commands_len;
+                        payload = mac_commands.GetMacCommandsBuffer();
                         framePort = 0;
                     }
                 }
             }
             else
             {
-                if( ( MacCommandsBufferIndex > 0 ) && ( MacCommandsInNextTx == true ) )
+                if( ( mac_commands_len > 0 ) && ( mac_commands.IsMacCommandsInNextTx() == true ) )
                 {
-                    LoRaMacTxPayloadLen = MacCommandsBufferIndex;
-                    payload = MacCommandsBuffer;
+                    LoRaMacTxPayloadLen = mac_commands_len;
+                    payload = mac_commands.GetMacCommandsBuffer();
                     framePort = 0;
                 }
             }
-            MacCommandsInNextTx = false;
+
             // Store MAC commands which must be re-send in case the device does not receive a downlink anymore
-            MacCommandsBufferToRepeatIndex = ParseMacCommandsToRepeat( MacCommandsBuffer, MacCommandsBufferIndex, MacCommandsBufferToRepeat );
-            if( MacCommandsBufferToRepeatIndex > 0 )
-            {
-                MacCommandsInNextTx = true;
-            }
+            mac_commands.ParseMacCommandsToRepeat();
 
             if( ( payload != NULL ) && ( LoRaMacTxPayloadLen > 0 ) )
             {
@@ -1870,11 +1534,10 @@ LoRaMacStatus_t LoRaMac::PrepareFrame( LoRaMacHeader_t *macHdr, LoRaMacFrameCtrl
                 if( framePort == 0 )
                 {
                     // Reset buffer index as the mac commands are being sent on port 0
-                    MacCommandsBufferIndex = 0;
+                    mac_commands.ClearCommandBuffer();
                     if (0 != LoRaMacPayloadEncrypt( (uint8_t* ) payload, LoRaMacTxPayloadLen, LoRaMacNwkSKey, LoRaMacDevAddr, UP_LINK, UpLinkCounter, &LoRaMacBuffer[pktHeaderLen] )) {
                         status = LORAMAC_STATUS_CRYPTO_FAIL;
                     }
-
                 }
                 else
                 {
@@ -1895,8 +1558,8 @@ LoRaMacStatus_t LoRaMac::PrepareFrame( LoRaMacHeader_t *macHdr, LoRaMacFrameCtrl
             LoRaMacBuffer[LoRaMacBufferPktLen + 3] = ( mic >> 24 ) & 0xFF;
 
             LoRaMacBufferPktLen += LORAMAC_MFR_LEN;
-
-            break;
+        }
+        break;
         case FRAME_TYPE_PROPRIETARY:
             if( ( fBuffer != NULL ) && ( LoRaMacTxPayloadLen > 0 ) )
             {
@@ -2129,7 +1792,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacQueryTxPossible( uint8_t size, LoRaMacTxInfo_t* 
     PhyParam_t phyParam;
     int8_t datarate = LoRaMacParamsDefaults.ChannelsDatarate;
     int8_t txPower = LoRaMacParamsDefaults.ChannelsTxPower;
-    uint8_t fOptLen = MacCommandsBufferIndex + MacCommandsBufferToRepeatIndex;
+    uint8_t fOptLen = mac_commands.GetLength() + mac_commands.GetRepeatLength();
 
     if( txInfo == NULL )
     {
@@ -2138,7 +1801,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacQueryTxPossible( uint8_t size, LoRaMacTxInfo_t* 
 
     // Setup ADR request
     adrNext.UpdateChanMask = false;
-    adrNext.AdrEnabled = AdrCtrlOn;
+    adrNext.AdrEnabled = LoRaMacParams.AdrCtrlOn;
     adrNext.AdrAckCounter = AdrAckCounter;
     adrNext.Datarate = LoRaMacParams.ChannelsDatarate;
     adrNext.TxPower = LoRaMacParams.ChannelsTxPower;
@@ -2172,8 +1835,8 @@ LoRaMacStatus_t LoRaMac::LoRaMacQueryTxPossible( uint8_t size, LoRaMacTxInfo_t* 
         // The fOpts don't fit into the maximum payload. Omit the MAC commands to
         // ensure that another uplink is possible.
         fOptLen = 0;
-        MacCommandsBufferIndex = 0;
-        MacCommandsBufferToRepeatIndex = 0;
+        mac_commands.ClearCommandBuffer();
+        mac_commands.ClearRepeatBuffer();
     }
 
     // Verify if the fOpts and the payload fit into the maximum payload
@@ -2209,7 +1872,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacMibGetRequestConfirm( MibRequestConfirm_t *mibGe
         }
         case MIB_ADR:
         {
-            mibGet->Param.AdrEnable = AdrCtrlOn;
+            mibGet->Param.AdrEnable = LoRaMacParams.AdrCtrlOn;
             break;
         }
         case MIB_NET_ID:
@@ -2409,7 +2072,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacMibSetRequestConfirm( MibRequestConfirm_t *mibSe
         }
         case MIB_ADR:
         {
-            AdrCtrlOn = mibSet->Param.AdrEnable;
+            LoRaMacParams.AdrCtrlOn = mibSet->Param.AdrEnable;
             break;
         }
         case MIB_NET_ID:
@@ -2861,7 +2524,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacMlmeRequest( MlmeReq_t *mlmeRequest )
             // LoRaMac will send this command piggy-pack
             MlmeConfirm.MlmeRequest = mlmeRequest->Type;
 
-            status = AddMacCommand( MOTE_MAC_LINK_CHECK_REQ, 0, 0 );
+            status = mac_commands.AddMacCommand( MOTE_MAC_LINK_CHECK_REQ, 0, 0 );
             break;
         }
         case MLME_TXCW:
@@ -2972,7 +2635,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacMcpsRequest( McpsReq_t *mcpsRequest )
 
     if( readyToSend == true )
     {
-        if( AdrCtrlOn == false )
+        if( LoRaMacParams.AdrCtrlOn == false )
         {
             verify.DatarateParams.Datarate = datarate;
             verify.DatarateParams.UplinkDwellTime = LoRaMacParams.UplinkDwellTime;
