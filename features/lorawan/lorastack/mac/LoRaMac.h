@@ -44,17 +44,13 @@
 #include "netsocket/LoRaRadio.h"
 #include "lorastack/phy/LoRaPHY.h"
 #include "lorawan/system/lorawan_data_structures.h"
+#include "LoRaMacCommand.h"
 
 
 /*!
  * Maximum PHY layer payload size
  */
 #define LORAMAC_PHY_MAXPAYLOAD                      255
-
-/*!
- * Maximum MAC commands buffer size
- */
-#define LORA_MAC_COMMAND_MAX_LENGTH                 128
 
 
 class LoRaMac
@@ -466,39 +462,6 @@ private:
     void RxWindowSetup( bool rxContinuous, uint32_t maxRxWindow );
 
     /*!
-     * \brief Adds a new MAC command to be sent.
-     *
-     * \Remark MAC layer internal function
-     *
-     * \param [in] cmd MAC command to be added
-     *                 [MOTE_MAC_LINK_CHECK_REQ,
-     *                  MOTE_MAC_LINK_ADR_ANS,
-     *                  MOTE_MAC_DUTY_CYCLE_ANS,
-     *                  MOTE_MAC_RX2_PARAM_SET_ANS,
-     *                  MOTE_MAC_DEV_STATUS_ANS
-     *                  MOTE_MAC_NEW_CHANNEL_ANS]
-     * \param [in] p1  1st parameter ( optional depends on the command )
-     * \param [in] p2  2nd parameter ( optional depends on the command )
-     *
-     * \retval status  Function status [0: OK, 1: Unknown command, 2: Buffer full]
-     */
-    LoRaMacStatus_t AddMacCommand( uint8_t cmd, uint8_t p1, uint8_t p2 );
-
-    /*!
-     * \brief Parses the MAC commands which must be repeated.
-     *
-     * \Remark MAC layer internal function
-     *
-     * \param [IN] cmdBufIn  Buffer which stores the MAC commands to send
-     * \param [IN] length  Length of the input buffer to parse
-     * \param [OUT] cmdBufOut  Buffer which stores the MAC commands which must be
-     *                         repeated.
-     *
-     * \retval Size of the MAC commands to repeat.
-     */
-    uint8_t ParseMacCommandsToRepeat( uint8_t* cmdBufIn, uint8_t length, uint8_t* cmdBufOut );
-
-    /*!
      * \brief Validates if the payload fits into the frame, taking the datarate
      *        into account.
      *
@@ -515,11 +478,6 @@ private:
      *          the frame]
      */
     bool ValidatePayloadLength( uint8_t lenN, int8_t datarate, uint8_t fOptsLen );
-
-    /*!
-     * \brief Decodes MAC commands in the fOpts field and in the payload
-     */
-    void ProcessMacCommands( uint8_t *payload, uint8_t macIndex, uint8_t commandsSize, uint8_t snr );
 
     /*!
      * \brief LoRaMAC layer generic send frame
@@ -621,6 +579,9 @@ private:
      * LoRa PHY layer object storage
      */
     LoRaPHY *lora_phy;
+
+    LoRaMacCommand mac_commands;
+
 
     /**
      * Radio event callback handlers for MAC
@@ -738,11 +699,6 @@ private:
     bool IsLoRaMacNetworkJoined;
 
     /*!
-     * LoRaMac ADR control status
-     */
-    bool AdrCtrlOn;
-
-    /*!
      * Counts the number of missed ADR acknowledgements
      */
     uint32_t AdrAckCounter;
@@ -760,31 +716,6 @@ private:
     bool SrvAckRequested;
 
     /*!
-     * Indicates if the MAC layer wants to send MAC commands
-     */
-    bool MacCommandsInNextTx;
-
-    /*!
-     * Contains the current MacCommandsBuffer index
-     */
-    uint8_t MacCommandsBufferIndex;
-
-    /*!
-     * Contains the current MacCommandsBuffer index for MAC commands to repeat
-     */
-    uint8_t MacCommandsBufferToRepeatIndex;
-
-    /*!
-     * Buffer containing the MAC layer commands
-     */
-    uint8_t MacCommandsBuffer[LORA_MAC_COMMAND_MAX_LENGTH];
-
-    /*!
-     * Buffer containing the MAC layer commands which must be repeated
-     */
-    uint8_t MacCommandsBufferToRepeat[LORA_MAC_COMMAND_MAX_LENGTH];
-
-    /*!
      * LoRaMac parameters
      */
     LoRaMacParams_t LoRaMacParams;
@@ -800,15 +731,8 @@ private:
     uint8_t ChannelsNbRepCounter;
 
     /*!
-     * Maximum duty cycle
-     * \remark Possibility to shutdown the device.
-     */
-    uint8_t MaxDCycle;
-
-    /*!
      * Aggregated duty cycle management
      */
-    uint16_t AggregatedDCycle;
     TimerTime_t AggregatedLastTxDoneTime;
     TimerTime_t AggregatedTimeOff;
 
