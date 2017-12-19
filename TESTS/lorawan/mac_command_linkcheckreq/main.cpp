@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+//TODO Fix this test case
 #include "utest/utest.h"
 #include "unity/unity.h"
 #include "greentea-client/test_env.h"
@@ -157,6 +157,7 @@ bool LoRaTestHelper::find_event(uint8_t event_code)
 
 LoRaWANInterface lorawan(Radio);
 LoRaTestHelper lora_helper;
+static bool link_check_response;
 
 void lora_send_MAC_command_linkcheckreq()
 {
@@ -192,16 +193,12 @@ void lora_send_MAC_command_linkcheckreq()
     // Reset timeout counter
     counter = 0;
 
-    // Send confirmed message to Conduit to initialize MAC command test and later open RX windows
-    // (Conduit sends MAC commands during these RX windows)
-    lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(0, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(0, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
     }
-
 
     while (1) {
         // Wait for TX_DONE event
@@ -221,32 +218,20 @@ void lora_send_MAC_command_linkcheckreq()
 
     // Reset timeout counter
     counter = 0;
-
     while (1) {
-        // Wait for RX_DONE event
-        if (lora_helper.find_event(RX_DONE)) {
+        // Wait for the link check resposne
+        if (link_check_response) {
             break;
         }
 
         // Fail on timeout
         if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Receive timeout");
+            TEST_ASSERT_MESSAGE(false, "Did not get link check response");
             return;
         }
 
         wait_ms(1000);
         counter++;
-    }
-
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
-    if (ret < 0) {
-        TEST_ASSERT_MESSAGE(false, "Receive failed");
-        return;
-    }
-
-    if (strcmp((char*)rx_data, "LinkCheckReq received") != 0) {
-        TEST_ASSERT_MESSAGE(false, "Message incorrect");
-        return;
     }
 
     // Test passed
@@ -266,12 +251,25 @@ utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
     return greentea_test_setup_handler(number_of_cases);
 }
 
+static lorawan_app_callbacks_t callbacks;
+
+static void link_check_response_handler(uint8_t demod_margin, uint8_t gw_count)
+{
+    if (gw_count >= 1) {
+        link_check_response = true;
+    }
+}
 
 int main() {
     t.start(callback(&ev_queue, &EventQueue::dispatch_forever));
 
     lorawan.initialize(&ev_queue);
-    lorawan.lora_event_callback(lora_event_handler);
+
+    callbacks.events = mbed::callback(lora_event_handler);;
+    callbacks.link_check_resp = mbed::callback(link_check_response_handler);
+
+    lorawan.add_app_callbacks(&callbacks);
+
 
     Specification specification(greentea_test_setup, cases, greentea_test_teardown_handler);
     Harness::run(specification);
