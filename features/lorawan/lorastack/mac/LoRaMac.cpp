@@ -801,6 +801,7 @@ void LoRaMac::OnRadioRxError( void )
 
         if( TimerGetElapsedTime( AggregatedLastTxDoneTime ) >= RxWindow2Delay )
         {
+            TimerStop( &RxWindowTimer2 );
             LoRaMacFlags.Bits.MacDone = 1;
         }
     }
@@ -836,6 +837,7 @@ void LoRaMac::OnRadioRxTimeout( void )
 
         if( TimerGetElapsedTime( AggregatedLastTxDoneTime ) >= RxWindow2Delay )
         {
+            TimerStop( &RxWindowTimer2 );
             LoRaMacFlags.Bits.MacDone = 1;
         }
     }
