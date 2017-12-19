@@ -168,12 +168,15 @@ utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
     return greentea_test_setup_handler(number_of_cases);
 }
 
+static lorawan_app_callbacks_t callbacks;
 
 int main() {
     // start the thread to handle events
     t.start(callback(&ev_queue, &EventQueue::dispatch_forever));
 
-    lorawan.lora_event_callback(lora_event_handler);
+    callbacks.events = mbed::callback(lora_event_handler);
+
+    lorawan.add_app_callbacks(&callbacks);
 
     Specification specification(greentea_test_setup, cases, greentea_test_teardown_handler);
     Harness::run(specification);

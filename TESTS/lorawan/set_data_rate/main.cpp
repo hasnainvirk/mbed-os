@@ -327,6 +327,7 @@ utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
     return greentea_test_setup_handler(number_of_cases);
 }
 
+static lorawan_app_callbacks_t callbacks;
 
 int main() {
     // start thread to handle events
@@ -334,7 +335,9 @@ int main() {
 
     lora_mac_status_t ret;
 
-    lorawan.lora_event_callback(lora_event_handler);
+    callbacks.events = mbed::callback(lora_event_handler);
+
+    lorawan.add_app_callbacks(&callbacks);
 
     ret = lorawan.initialize(&ev_queue);
     TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Initialization failed");
