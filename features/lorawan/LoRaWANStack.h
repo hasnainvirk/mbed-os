@@ -328,6 +328,13 @@ private:
     void mlme_confirm(MlmeConfirm_t *mlme_confirm);
 
     /**
+     * Callback function for MLME indication. Mac layer calls this function once
+     * an MLME indication is received. This method translates Mac layer data
+     * structure into stack layer data structure.
+     */
+    void mlme_indication( MlmeIndication_t *mlmeIndication );
+
+    /**
      * Handles an MLME request coming from the upper layers and delegates
      * it to the Mac layer, for example, a Join request goes as an MLME request
      * to the Mac layer.
