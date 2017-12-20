@@ -871,7 +871,7 @@ private:
     uint8_t MaxJoinRequestTrials;
 
     /*!
-     * Structure to hold an MCPS indication data.
+     * Structure to hold MCPS indication data.
      */
     McpsIndication_t McpsIndication;
 
