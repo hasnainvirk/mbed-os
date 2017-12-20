@@ -22,7 +22,6 @@ Copyright (c) 2017, Arm Limited and affiliates.
 SPDX-License-Identifier: BSD-3-Clause
 */
 #include <stdlib.h>
-#include "events/EventQueue.h"
 #include "LoRaMac.h"
 #include "LoRaMacCrypto.h"
 
@@ -91,6 +90,7 @@ static LoRaMac* isrHandler = NULL;
 
 
 LoRaMac::LoRaMac()
+    : mac_commands(*this)
 {
     isrHandler = this;
 
@@ -1037,6 +1037,12 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
             LoRaMacFlags.Bits.MlmeReq = 0;
         }
 
+        // Verify if sticky MAC commands are pending or not
+        if( mac_commands.IsStickyMacCommandPending( ) == true )
+        {// Setup MLME indication
+            SetMlmeScheduleUplinkIndication( );
+        }
+
         // Procedure done. Reset variables.
         LoRaMacFlags.Bits.MacDone = 0;
     }
@@ -1059,6 +1065,13 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
         }
         LoRaMacFlags.Bits.McpsIndSkip = 0;
         LoRaMacFlags.Bits.McpsInd = 0;
+    }
+
+    // Handle MLME indication
+    if( LoRaMacFlags.Bits.MlmeInd == 1 )
+    {
+        LoRaMacPrimitives->MacMlmeIndication( &MlmeIndication );
+        LoRaMacFlags.Bits.MlmeInd = 0;
     }
 }
 
@@ -1204,6 +1217,12 @@ bool LoRaMac::ValidatePayloadLength( uint8_t lenN, int8_t datarate, uint8_t fOpt
         return true;
     }
     return false;
+}
+
+void LoRaMac::SetMlmeScheduleUplinkIndication( void )
+{
+    MlmeIndication.MlmeIndication = MLME_SCHEDULE_UPLINK;
+    LoRaMacFlags.Bits.MlmeInd = 1;
 }
 
 // This is not actual transmission. It just schedules a message in response

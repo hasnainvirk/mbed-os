@@ -655,6 +655,10 @@ typedef union eLoRaMacFlags_t
          */
         uint8_t MlmeReq         : 1;
         /*!
+         * MLME-Ind pending
+         */
+        uint8_t MlmeInd         : 1;
+        /*!
          * MAC cycle done
          */
         uint8_t MacDone         : 1;
@@ -940,11 +944,12 @@ typedef struct sMcpsIndication
  * \details The following table list the primitives supported by a
  *          specific MAC management service:
  *
- * Name                  | Request | Indication | Response | Confirm
- * --------------------- | :-----: | :--------: | :------: | :-----:
- * \ref MLME_JOIN        | YES     | NO         | NO       | YES
- * \ref MLME_LINK_CHECK  | YES     | NO         | NO       | YES
- * \ref MLME_TXCW        | YES     | NO         | NO       | YES
+ * Name                         | Request | Indication | Response | Confirm
+ * ---------------------------- | :-----: | :--------: | :------: | :-----:
+ * \ref MLME_JOIN               | YES     | NO         | NO       | YES
+ * \ref MLME_LINK_CHECK         | YES     | NO         | NO       | YES
+ * \ref MLME_TXCW               | YES     | NO         | NO       | YES
+ * \ref MLME_SCHEDULE_UPLINK    | NO      | YES        | NO       | NO
  *
  * The following table provides links to the function implementations of the
  * related MLME primitives.
@@ -953,6 +958,7 @@ typedef struct sMcpsIndication
  * ---------------- | :---------------------:
  * MLME-Request     | \ref LoRaMacMlmeRequest
  * MLME-Confirm     | MacMlmeConfirm in \ref LoRaMacPrimitives_t
+ * MLME-Indication  | MacMlmeIndication in \ref LoRaMacPrimitives_t
  */
 typedef enum eMlme
 {
@@ -980,6 +986,11 @@ typedef enum eMlme
      * LoRaWAN end-device certification.
      */
     MLME_TXCW_1,
+    /*!
+     * Indicates that the application shall perform an uplink as
+     * soon as possible.
+     */
+    MLME_SCHEDULE_UPLINK
 }Mlme_t;
 
 /*!
@@ -1087,6 +1098,17 @@ typedef struct sMlmeConfirm
      */
     uint8_t NbRetries;
 }MlmeConfirm_t;
+
+/*!
+ * LoRaMAC MLME-Indication primitive
+ */
+typedef struct sMlmeIndication
+{
+    /*!
+     * MLME-Indication type
+     */
+    Mlme_t MlmeIndication;
+}MlmeIndication_t;
 
 /*!
  * LoRa MAC Information Base (MIB).
@@ -1633,6 +1655,13 @@ typedef struct sLoRaMacPrimitives
      * \param   [OUT] MLME-Confirm parameters.
      */
     mbed::Callback<void(MlmeConfirm_t*)> MacMlmeConfirm;
+
+    /*!
+     * \brief   MLME-Indication primitive
+     *
+     * \param   [OUT] MLME-Indication parameters
+     */
+    mbed::Callback<void(MlmeIndication_t*)> MacMlmeIndication;
 }LoRaMacPrimitives_t;
 
 /*!
