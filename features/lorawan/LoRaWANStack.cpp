@@ -196,6 +196,7 @@ lora_mac_status_t LoRaWANStack::initialize_mac_layer(EventQueue *queue)
     LoRaMacPrimitives.MacMcpsConfirm = callback(this, &LoRaWANStack::mcps_confirm);
     LoRaMacPrimitives.MacMcpsIndication = callback(this, &LoRaWANStack::mcps_indication);
     LoRaMacPrimitives.MacMlmeConfirm = callback(this, &LoRaWANStack::mlme_confirm);
+    LoRaMacPrimitives.MacMlmeIndication = callback(this, &LoRaWANStack::mlme_indication);
     _loramac.LoRaMacInitialization(&LoRaMacPrimitives, &LoRaMacCallbacks, &lora_phy, queue);
 
     mib_req.type = LORA_MIB_ADR;
@@ -466,9 +467,30 @@ void LoRaWANStack::mlme_confirm(MlmeConfirm_t *mlme_confirm)
     mlme_confirm_handler(&lora_mlme_confirm);
 }
 
+/*!
+ * \brief   MLME-Indication event function
+ *
+ * \param   [IN] mlmeIndication - Pointer to the indication structure.
+ */
+void LoRaWANStack::mlme_indication( MlmeIndication_t *mlmeIndication )
+{
+    switch( mlmeIndication->MlmeIndication )
+    {
+        case MLME_SCHEDULE_UPLINK:
+        {// The MAC signals that we shall provide an uplink as soon as possible
+            // TODO: Sending implementation missing and will be implemented using
+            //       another task.
+            //OnTxNextPacketTimerEvent( );
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+
 void LoRaWANStack::set_lora_callbacks(lorawan_app_callbacks_t *cbs)
 {
-
     if (cbs) {
         if (cbs->events) {
             _callbacks.events = cbs->events;
