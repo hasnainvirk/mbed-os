@@ -49,11 +49,12 @@
  */
 #define LORA_MAC_COMMAND_MAX_LENGTH                 128
 
+class LoRaMac;
 
 class LoRaMacCommand
 {
 public:
-    LoRaMacCommand();
+    LoRaMacCommand(LoRaMac &lora_mac);
     ~LoRaMacCommand();
 
     /*!
@@ -135,7 +136,16 @@ public:
                             MlmeConfirm_t &MlmeConfirm, LoRaMacCallback_t *LoRaMacCallbacks,
                             LoRaMacParams_t &LoRaMacParams, LoRaPHY &lora_phy);
 
+    /*!
+     * \brief Verifies if sticky MAC commands are pending.
+     *
+     * \retval [true: sticky MAC commands pending, false: No MAC commands pending]
+     */
+    bool IsStickyMacCommandPending();
+
 private:
+    LoRaMac& _lora_mac;
+
     /*!
      * Indicates if the MAC layer wants to send MAC commands
      */

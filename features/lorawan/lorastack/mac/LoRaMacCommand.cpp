@@ -22,6 +22,7 @@ Copyright (c) 2017, Arm Limited and affiliates.
 SPDX-License-Identifier: BSD-3-Clause
 */
 #include "LoRaMacCommand.h"
+#include "LoRaMac.h"
 
 #if defined(FEATURE_COMMON_PAL)
 #include "mbed_trace.h"
@@ -38,7 +39,8 @@ SPDX-License-Identifier: BSD-3-Clause
 static const uint8_t LoRaMacMaxEirpTable[] = { 8, 10, 12, 13, 14, 16, 18, 20, 21, 24, 26, 27, 29, 30, 33, 36 };
 
 
-LoRaMacCommand::LoRaMacCommand()
+LoRaMacCommand::LoRaMacCommand(LoRaMac& lora_mac)
+    : _lora_mac(lora_mac)
 {
     MacCommandsInNextTx = false;
     MacCommandsBufferIndex = 0;
@@ -90,6 +92,8 @@ LoRaMacStatus_t LoRaMacCommand::AddMacCommand(uint8_t cmd, uint8_t p1, uint8_t p
                 MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
                 // Status: Datarate ACK, Channel ACK
                 MacCommandsBuffer[MacCommandsBufferIndex++] = p1;
+                // This is a sticky MAC command answer. Setup indication
+                _lora_mac.SetMlmeScheduleUplinkIndication();
                 status = LORAMAC_STATUS_OK;
             }
             break;
@@ -118,6 +122,8 @@ LoRaMacStatus_t LoRaMacCommand::AddMacCommand(uint8_t cmd, uint8_t p1, uint8_t p
             {
                 MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
                 // No payload for this answer
+                // This is a sticky MAC command answer. Setup indication
+                _lora_mac.SetMlmeScheduleUplinkIndication();
                 status = LORAMAC_STATUS_OK;
             }
             break;
@@ -135,6 +141,8 @@ LoRaMacStatus_t LoRaMacCommand::AddMacCommand(uint8_t cmd, uint8_t p1, uint8_t p
                 MacCommandsBuffer[MacCommandsBufferIndex++] = cmd;
                 // Status: Uplink frequency exists, Channel frequency OK
                 MacCommandsBuffer[MacCommandsBufferIndex++] = p1;
+                // This is a sticky MAC command answer. Setup indication
+                _lora_mac.SetMlmeScheduleUplinkIndication();
                 status = LORAMAC_STATUS_OK;
             }
             break;
@@ -423,4 +431,14 @@ void LoRaMacCommand::ProcessMacCommands(uint8_t *payload, uint8_t macIndex, uint
                 return;
         }
     }
+}
+
+bool LoRaMacCommand::IsStickyMacCommandPending()
+{
+    if( MacCommandsBufferToRepeatIndex > 0 )
+    {
+        // Sticky MAC commands pending
+        return true;
+    }
+    return false;
 }

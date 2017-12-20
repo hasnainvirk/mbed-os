@@ -45,6 +45,7 @@
 #include "lorastack/phy/LoRaPHY.h"
 #include "lorawan/system/lorawan_data_structures.h"
 #include "LoRaMacCommand.h"
+#include "events/EventQueue.h"
 
 
 /*!
@@ -324,6 +325,12 @@ public:
      * \return Pointer to callback functions for radio events
      */
     radio_events_t *GetPhyEventHandlers();
+
+    /*!
+     * \brief Configures the events to trigger an MLME-Indication with
+     *        a MLME type of MLME_SCHEDULE_UPLINK.
+     */
+    void SetMlmeScheduleUplinkIndication( void );
 
 public: // Test interface
 
@@ -872,6 +879,11 @@ private:
      * Structure to hold MCPS confirm data.
      */
     McpsConfirm_t McpsConfirm;
+
+    /*!
+     * Structure to hold MLME indication data.
+     */
+    MlmeIndication_t MlmeIndication;
 
     /*!
      * Structure to hold MLME confirm data.
