@@ -1052,6 +1052,7 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
         TimerStart( &MacStateCheckTimer );
     }
 
+    // Handle MCPS indication
     if( LoRaMacFlags.Bits.McpsInd == 1 )
     {
         if( LoRaMacDeviceClass == CLASS_C )
