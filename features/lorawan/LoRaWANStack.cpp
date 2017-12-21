@@ -192,7 +192,7 @@ lora_mac_status_t LoRaWANStack::initialize_mac_layer(EventQueue *queue)
     // Allocate memory for compliance test
     _compliance_test.app_data_buffer = compliance_test_buffer;
 
-    TimerTimeCounterInit( );
+    TimerTimeCounterInit(queue);
     LoRaMacPrimitives.MacMcpsConfirm = callback(this, &LoRaWANStack::mcps_confirm);
     LoRaMacPrimitives.MacMcpsIndication = callback(this, &LoRaWANStack::mcps_indication);
     LoRaMacPrimitives.MacMlmeConfirm = callback(this, &LoRaWANStack::mlme_confirm);
