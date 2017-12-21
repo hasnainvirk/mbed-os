@@ -2586,7 +2586,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacMcpsRequest( McpsReq_t *mcpsRequest )
     uint8_t fPort = 0;
     void *fBuffer;
     uint16_t fBufferSize;
-    int8_t datarate;
+    int8_t datarate = DR_0;
     bool readyToSend = false;
 
     if( mcpsRequest == NULL )
