@@ -157,7 +157,7 @@ LoRaMac::LoRaMac()
     //McpsIndication_t McpsIndication;
     //McpsConfirm_t McpsConfirm;
     //MlmeConfirm_t MlmeConfirm;
-    RxSlot = 0;
+    //LoRaMacRxSlot_t RxSlot;
     //LoRaMacFlags_t LoRaMacFlags;
 }
 
@@ -247,7 +247,7 @@ void LoRaMac::OnRadioTxDone( void )
     }
     else
     {
-        handle_rx2_timer_event();
+        OpenContinuousRx2Window( );
     }
 
     // Setup timers
@@ -771,7 +771,7 @@ void LoRaMac::OnRadioTxTimeout( void )
     }
     else
     {
-        handle_rx2_timer_event();
+        OpenContinuousRx2Window( );
     }
 
     McpsConfirm.Status = LORAMAC_EVENT_INFO_STATUS_TX_TIMEOUT;
@@ -787,10 +787,10 @@ void LoRaMac::OnRadioRxError( void )
     }
     else
     {
-        handle_rx2_timer_event();
+        OpenContinuousRx2Window( );
     }
 
-    if( RxSlot == 0 )
+    if( RxSlot == RX_SLOT_WIN_1 )
     {
         if( NodeAckRequested == true )
         {
@@ -823,10 +823,10 @@ void LoRaMac::OnRadioRxTimeout( void )
     }
     else
     {
-        handle_rx2_timer_event();
+        OpenContinuousRx2Window( );
     }
 
-    if( RxSlot == 0 )
+    if( RxSlot == RX_SLOT_WIN_1 )
     {
         if( NodeAckRequested == true )
         {
@@ -1058,7 +1058,7 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
         LoRaMacFlags.Bits.McpsInd = 0;
         if( LoRaMacDeviceClass == CLASS_C )
         {// Activate RX2 window for Class C
-            handle_rx2_timer_event();
+            OpenContinuousRx2Window( );
         }
         if( LoRaMacFlags.Bits.McpsIndSkip == 0 )
         {
@@ -1124,14 +1124,14 @@ void LoRaMac::OnTxDelayedTimerEvent( void )
 void LoRaMac::OnRxWindow1TimerEvent( void )
 {
     TimerStop( &RxWindowTimer1 );
-    RxSlot = 0;
+    RxSlot = RX_SLOT_WIN_1;
 
     RxWindow1Config.Channel = Channel;
     RxWindow1Config.DrOffset = LoRaMacParams.Rx1DrOffset;
     RxWindow1Config.DownlinkDwellTime = LoRaMacParams.DownlinkDwellTime;
     RxWindow1Config.RepeaterSupport = RepeaterSupport;
     RxWindow1Config.RxContinuous = false;
-    RxWindow1Config.Window = RxSlot;
+    RxWindow1Config.Window = 0;
 
     if( LoRaMacDeviceClass == CLASS_C )
     {
@@ -1158,13 +1158,14 @@ void LoRaMac::OnRxWindow2TimerEvent( void )
     }
     else
     {
+        // Setup continuous listening for class c
         RxWindow2Config.RxContinuous = true;
     }
 
     if(lora_phy->rx_config(&RxWindow2Config, ( int8_t* )&McpsIndication.RxDatarate) == true )
     {
         RxWindowSetup( RxWindow2Config.RxContinuous, LoRaMacParams.MaxRxWindow );
-        RxSlot = RxWindow2Config.Window;
+        RxSlot = RX_SLOT_WIN_2;
     }
 }
 
@@ -1410,7 +1411,22 @@ void LoRaMac::ResetMacParameters( void )
     LastTxChannel = Channel;
 }
 
-void memcpy_convert_endianess( uint8_t *dst, const uint8_t *src, uint16_t size )
+bool LoRaMac::IsFPortAllowed( uint8_t fPort )
+{
+    if( ( fPort == 0 ) || ( fPort > 224 ) )
+    {
+        return false;
+    }
+    return true;
+}
+
+void LoRaMac::OpenContinuousRx2Window( void )
+{
+    handle_rx2_timer_event( );
+    RxSlot = RX_SLOT_WIN_CLASS_C;
+}
+
+static void memcpy_convert_endianess( uint8_t *dst, const uint8_t *src, uint16_t size )
 {
     dst = dst + ( size - 1 );
     while( size-- )
@@ -2080,7 +2096,14 @@ LoRaMacStatus_t LoRaMac::LoRaMacMibSetRequestConfirm( MibRequestConfirm_t *mibSe
                 {
                     // Set the NodeAckRequested indicator to default
                     NodeAckRequested = false;
-                    handle_rx2_timer_event();
+                    // Set the radio into sleep mode in case we are still in RX mode
+                    lora_phy->put_radio_to_sleep();
+                    // Compute Rx2 windows parameters in case the RX2 datarate has changed
+                    lora_phy->compute_rx_win_params( LoRaMacParams.Rx2Channel.Datarate,
+                                                     LoRaMacParams.MinRxSymbols,
+                                                     LoRaMacParams.SystemMaxRxError,
+                                                     &RxWindow2Config );
+                    OpenContinuousRx2Window( );
                     break;
                 }
             }
@@ -2154,28 +2177,18 @@ LoRaMacStatus_t LoRaMac::LoRaMacMibSetRequestConfirm( MibRequestConfirm_t *mibSe
 
                 if( ( LoRaMacDeviceClass == CLASS_C ) && ( IsLoRaMacNetworkJoined == true ) )
                 {
+                    // We can only compute the RX window parameters directly, if we are already
+                    // in class c mode and joined. We cannot setup an RX window in case of any other
+                    // class type.
+                    // Set the radio into sleep mode in case we are still in RX mode
+                    lora_phy->put_radio_to_sleep();
                     // Compute Rx2 windows parameters
                     lora_phy->compute_rx_win_params(LoRaMacParams.Rx2Channel.Datarate,
                                                    LoRaMacParams.MinRxSymbols,
                                                    LoRaMacParams.SystemMaxRxError,
                                                    &RxWindow2Config);
 
-                    RxWindow2Config.Channel = Channel;
-                    RxWindow2Config.Frequency = LoRaMacParams.Rx2Channel.Frequency;
-                    RxWindow2Config.DownlinkDwellTime = LoRaMacParams.DownlinkDwellTime;
-                    RxWindow2Config.RepeaterSupport = RepeaterSupport;
-                    RxWindow2Config.Window = 1;
-                    RxWindow2Config.RxContinuous = true;
-
-                    if(lora_phy->rx_config(&RxWindow2Config, ( int8_t* )&McpsIndication.RxDatarate) == true )
-                    {
-                        RxWindowSetup( RxWindow2Config.RxContinuous, LoRaMacParams.MaxRxWindow );
-                        RxSlot = RxWindow2Config.Window;
-                    }
-                    else
-                    {
-                        status = LORAMAC_STATUS_PARAMETER_INVALID;
-                    }
+                    OpenContinuousRx2Window( );
                 }
             }
             else
@@ -2644,6 +2657,12 @@ LoRaMacStatus_t LoRaMac::LoRaMacMcpsRequest( McpsReq_t *mcpsRequest )
         }
         default:
             break;
+    }
+
+    // Filter fPorts
+    if( IsFPortAllowed( fPort ) == false )
+    {
+        return LORAMAC_STATUS_PARAMETER_INVALID;
     }
 
     // Get the minimum possible datarate
