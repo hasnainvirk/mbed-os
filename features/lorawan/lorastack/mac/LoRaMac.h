@@ -562,6 +562,20 @@ private:
      */
     void ResetMacParameters( void );
 
+    /*!
+     * \brief Resets MAC specific parameters to default
+     *
+     * \param [IN] fPort     The fPort
+     *
+     * \retval [false: fPort not allowed, true: fPort allowed]
+     */
+    bool IsFPortAllowed( uint8_t fPort );
+
+    /*!
+     * \brief Opens up a continuous RX 2 window. This is used for
+     *        class c devices.
+     */
+    void OpenContinuousRx2Window( void );
 
     /**
      * Prototypes for ISR handlers
@@ -893,7 +907,7 @@ private:
     /*!
      * Holds the current rx window slot
      */
-    uint8_t RxSlot;
+    LoRaMacRxSlot_t RxSlot;
 
     /*!
      * LoRaMac tx/rx operation state
