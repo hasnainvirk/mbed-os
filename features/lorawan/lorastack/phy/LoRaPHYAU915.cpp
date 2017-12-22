@@ -638,7 +638,7 @@ bool LoRaPHYAU915::rx_config(RxConfigParams_t* rxConfig, int8_t* datarate)
         return false;
     }
 
-    if (rxConfig->Window == 0) {
+    if (rxConfig->RxSlot == RX_SLOT_WIN_1) {
         // Apply window 1 frequency
         frequency = AU915_FIRST_RX1_CHANNEL
                 + (rxConfig->Channel % 8) * AU915_STEPWIDTH_RX1_CHANNEL;
