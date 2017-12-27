@@ -2660,10 +2660,11 @@ LoRaMacStatus_t LoRaMac::LoRaMacMcpsRequest( McpsReq_t *mcpsRequest )
     }
 
     // Filter fPorts
-    if( IsFPortAllowed( fPort ) == false )
-    {
-        return LORAMAC_STATUS_PARAMETER_INVALID;
-    }
+    // TODO: Does not work with PROPRIETARY messages
+//    if( IsFPortAllowed( fPort ) == false )
+//    {
+//        return LORAMAC_STATUS_PARAMETER_INVALID;
+//    }
 
     // Get the minimum possible datarate
     getPhy.Attribute = PHY_MIN_TX_DR;
