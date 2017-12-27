@@ -263,11 +263,11 @@ public:
     /*!
      * \brief Alternates the datarate of the channel for the join request.
      *
-     * \param [in] alternateDr A pointer to the function parameters.
+     * \param [in] alternateDr currentDr Current datarate.
      *
      * \retval The datarate to apply.
      */
-    virtual int8_t get_alternate_DR(AlternateDrParams_t* alternateDr );
+    virtual int8_t get_alternate_DR(int8_t currentDr);
 
     /*!
      * \brief Calculates the back-off time.

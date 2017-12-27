@@ -460,7 +460,6 @@ void LoRaWANStack::mlme_confirm(MlmeConfirm_t *mlme_confirm)
     lora_mlme_confirm.demod_margin = mlme_confirm->DemodMargin;
     lora_mlme_confirm.mlme_request = (lora_mac_mlme_t)mlme_confirm->MlmeRequest;
     lora_mlme_confirm.nb_gateways = mlme_confirm->NbGateways;
-    lora_mlme_confirm.nb_retries = mlme_confirm->NbRetries;
     lora_mlme_confirm.status = (lora_mac_event_info_status_t)mlme_confirm->Status;
     lora_mlme_confirm.tx_time_on_air = mlme_confirm->TxTimeOnAir;
 
@@ -744,8 +743,6 @@ void LoRaWANStack::commission_device(const lora_dev_commission_t &commission_dat
                 commission_data.connection.connection_u.otaa.app_key;
         _lw_session.connection.connection_u.otaa.dev_eui =
                 commission_data.connection.connection_u.otaa.dev_eui;
-        _lw_session.connection.connection_u.otaa.nb_trials =
-                commission_data.connection.connection_u.otaa.nb_trials;
     } else {
         _lw_session.connection.connection_u.abp.dev_addr =
                 commission_data.connection.connection_u.abp.dev_addr;
@@ -776,7 +773,6 @@ lora_mac_status_t LoRaWANStack::join_request_by_otaa(const lorawan_connect_t &pa
     commission.connection.connection_u.otaa.dev_eui = params.connection_u.otaa.dev_eui;
     commission.connection.connection_u.otaa.app_eui = params.connection_u.otaa.app_eui;
     commission.connection.connection_u.otaa.app_key = params.connection_u.otaa.app_key;
-    commission.connection.connection_u.otaa.nb_trials = params.connection_u.otaa.nb_trials;
 
     // As mentioned in the comment above, in 1.0.2 spec, counters are always set
     // to zero for new connection. This section is common for both normal and
@@ -1023,7 +1019,6 @@ lora_mac_status_t LoRaWANStack::mlme_request_handler(lora_mac_mlme_req_t *mlme_r
             request.Req.Join.AppEui = mlme_request->req.join.app_eui;
             request.Req.Join.AppKey = mlme_request->req.join.app_key;
             request.Req.Join.DevEui = mlme_request->req.join.dev_eui;
-            request.Req.Join.NbTrials = mlme_request->req.join.nb_trials;
             break;
         // This is handled in semtech stack. Only type value is needed.
         case LORA_MLME_LINK_CHECK:
@@ -1392,7 +1387,6 @@ void LoRaWANStack::compliance_test_handler(lora_mac_mcps_indication_t *mcps_indi
             mlme_request.req.join.dev_eui = _lw_session.connection.connection_u.otaa.dev_eui;
             mlme_request.req.join.app_eui = _lw_session.connection.connection_u.otaa.app_eui;
             mlme_request.req.join.app_key = _lw_session.connection.connection_u.otaa.app_key;
-            mlme_request.req.join.nb_trials = _lw_session.connection.connection_u.otaa.nb_trials;
             mlme_request_handler(&mlme_request);
             break;
         case 7: // (x)
@@ -1877,7 +1871,6 @@ lora_mac_status_t LoRaWANStack::lora_state_machine()
                 mlme_req.req.join.dev_eui = _lw_session.connection.connection_u.otaa.dev_eui;
                 mlme_req.req.join.app_eui = _lw_session.connection.connection_u.otaa.app_eui;
                 mlme_req.req.join.app_key = _lw_session.connection.connection_u.otaa.app_key;
-                mlme_req.req.join.nb_trials = _lw_session.connection.connection_u.otaa.nb_trials;
 
                 // Send join request to server.
                 status = mlme_request_handler(&mlme_req);

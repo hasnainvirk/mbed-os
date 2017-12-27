@@ -1039,10 +1039,6 @@ typedef struct sMlmeReqJoin
      * LoRaWAN Specification V1.0.2, chapter 6.2.2.
      */
     uint8_t *AppKey;
-    /*!
-     * The number of trials for the join request.
-     */
-    uint8_t NbTrials;
 }MlmeReqJoin_t;
 
 /*!
@@ -1116,10 +1112,6 @@ typedef struct sMlmeConfirm
      * The number of gateways which received the last LinkCheckReq.
      */
     uint8_t NbGateways;
-    /*!
-     * The number of retransmissions.
-     */
-    uint8_t NbRetries;
 }MlmeConfirm_t;
 
 /*!
@@ -1923,11 +1915,6 @@ typedef struct lorawan_connect_otaa {
      * LoRaWAN Specification V1.0.2, chapter 6.2.2
      */
     uint8_t *app_key;
-    /** Join request trials
-     *
-     * Number of trials for the join request.
-     */
-    uint8_t nb_trials;
 } lorawan_connect_otaa_t;
 
 /** The lorawan_connect_abp structure.
@@ -2267,11 +2254,6 @@ typedef struct lora_mac_mlme_confirm {
      * The number of gateways that received the last LinkCheckReq.
      */
     uint8_t nb_gateways;
-    /** The retransmission counter.
-     *
-     * The number of retransmissions.
-     */
-    uint8_t nb_retries;
 } lora_mac_mlme_confirm_t;
 
 /** LoRaMAC MCPS-Confirm

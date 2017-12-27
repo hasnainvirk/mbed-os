@@ -650,14 +650,6 @@ typedef enum ePhyAttribute
      */
     PHY_DEF_ANTENNA_GAIN,
     /*!
-     * The value for the number of join trials.
-     */
-    PHY_NB_JOIN_TRIALS,
-    /*!
-     * The default value for the number of join trials.
-     */
-    PHY_DEF_NB_JOIN_TRIALS,
-    /*!
      * The next lower datarate.
      */
     PHY_NEXT_LOWER_TX_DR
@@ -777,10 +769,6 @@ typedef union uVerifyParams
      * Set to true, if the duty cycle is enabled, otherwise false.
      */
     bool DutyCycle;
-    /*!
-     * The number of join trials.
-     */
-    uint8_t NbJoinTrials;
     /*!
      * The datarate to verify.
      */

@@ -414,11 +414,6 @@ PhyParam_t LoRaPHYAU915::get_phy_params(GetPhyParams_t* getPhy)
             phyParam.fValue = AU915_DEFAULT_ANTENNA_GAIN;
             break;
         }
-        case PHY_NB_JOIN_TRIALS:
-        case PHY_DEF_NB_JOIN_TRIALS: {
-            phyParam.Value = 2;
-            break;
-        }
         default: {
             break;
         }
@@ -504,16 +499,9 @@ bool LoRaPHYAU915::verify(VerifyParams_t* verify, PhyAttribute_t phyAttribute)
         case PHY_DUTY_CYCLE: {
             return AU915_DUTY_CYCLE_ENABLED;
         }
-        case PHY_NB_JOIN_TRIALS: {
-            if (verify->NbJoinTrials < 2) {
-                return false;
-            }
-            break;
-        }
         default:
             return false;
     }
-    return true;
 }
 
 void LoRaPHYAU915::apply_cf_list(ApplyCFListParams_t* applyCFList)
@@ -852,19 +840,20 @@ uint8_t LoRaPHYAU915::dl_channel_request(DlChannelReqParams_t* dlChannelReq)
     return 0;
 }
 
-int8_t LoRaPHYAU915::get_alternate_DR(AlternateDrParams_t* alternateDr)
+int8_t LoRaPHYAU915::get_alternate_DR(int8_t currentDr)
 {
-    int8_t datarate = 0;
+    static int8_t trialsCount = 0;
 
     // Re-enable 500 kHz default channels
     ChannelsMask[4] = 0x00FF;
 
-    if ((alternateDr->NbTrials & 0x01) == 0x01) {
-        datarate = DR_6;
+    if( ( trialsCount & 0x01 ) == 0x01 ) {
+        currentDr = DR_6;
     } else {
-        datarate = DR_0;
+        currentDr = DR_0;
     }
-    return datarate;
+    trialsCount++;
+    return currentDr;
 }
 
 void LoRaPHYAU915::calculate_backoff(CalcBackOffParams_t* calcBackOff)

@@ -476,12 +476,6 @@ PhyParam_t LoRaPHYIN865::get_phy_params(GetPhyParams_t* getPhy)
             phyParam.fValue = IN865_DEFAULT_ANTENNA_GAIN;
             break;
         }
-        case PHY_NB_JOIN_TRIALS:
-        case PHY_DEF_NB_JOIN_TRIALS:
-        {
-            phyParam.Value = 48;
-            break;
-        }
         default:
         {
             break;
@@ -555,18 +549,9 @@ bool LoRaPHYIN865::verify(VerifyParams_t* verify, PhyAttribute_t phyAttribute)
         {
             return IN865_DUTY_CYCLE_ENABLED;
         }
-        case PHY_NB_JOIN_TRIALS:
-        {
-            if( verify->NbJoinTrials < 48 )
-            {
-                return false;
-            }
-            break;
-        }
         default:
             return false;
     }
-    return true;
 }
 
 void LoRaPHYIN865::apply_cf_list(ApplyCFListParams_t* applyCFList)
@@ -1029,35 +1014,9 @@ uint8_t LoRaPHYIN865::dl_channel_request(DlChannelReqParams_t* dlChannelReq)
     return status;
 }
 
-int8_t LoRaPHYIN865::get_alternate_DR(AlternateDrParams_t* alternateDr)
+int8_t LoRaPHYIN865::get_alternate_DR(int8_t currentDr)
 {
-    int8_t datarate = 0;
-
-    if( ( alternateDr->NbTrials % 48 ) == 0 )
-    {
-        datarate = DR_0;
-    }
-    else if( ( alternateDr->NbTrials % 32 ) == 0 )
-    {
-        datarate = DR_1;
-    }
-    else if( ( alternateDr->NbTrials % 24 ) == 0 )
-    {
-        datarate = DR_2;
-    }
-    else if( ( alternateDr->NbTrials % 16 ) == 0 )
-    {
-        datarate = DR_3;
-    }
-    else if( ( alternateDr->NbTrials % 8 ) == 0 )
-    {
-        datarate = DR_4;
-    }
-    else
-    {
-        datarate = DR_5;
-    }
-    return datarate;
+    return currentDr;
 }
 
 void LoRaPHYIN865::calculate_backoff(CalcBackOffParams_t* calcBackOff)

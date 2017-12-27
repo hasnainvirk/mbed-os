@@ -175,7 +175,6 @@ void lora_connect_with_params_otaa_wrong()
     params.connection_u.otaa.dev_eui = my_dev_eui;
     params.connection_u.otaa.app_eui = my_app_eui;
     params.connection_u.otaa.app_key = my_app_key;
-    params.connection_u.otaa.nb_trials = LORAWAN_NB_TRIALS;
 
     ret = lorawan.connect(params);
     TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "MAC status incorrect");

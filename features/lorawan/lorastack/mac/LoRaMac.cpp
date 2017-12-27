@@ -895,27 +895,12 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
             {
                 if( ( LoRaMacFlags.Bits.MlmeReq == 1 ) && ( MlmeConfirm.MlmeRequest == MLME_JOIN ) )
                 {// Procedure for the join request
-                    MlmeConfirm.NbRetries = JoinRequestTrials;
-
                     if( MlmeConfirm.Status == LORAMAC_EVENT_INFO_STATUS_OK )
                     {// Node joined successfully
                         UpLinkCounter = 0;
                         ChannelsNbRepCounter = 0;
-                        LoRaMacState &= ~LORAMAC_TX_RUNNING;
                     }
-                    else
-                    {
-                        if( JoinRequestTrials >= MaxJoinRequestTrials )
-                        {
-                            LoRaMacState &= ~LORAMAC_TX_RUNNING;
-                        }
-                        else
-                        {
-                            LoRaMacFlags.Bits.MacDone = 0;
-                            // Sends the same frame again
-                            handle_delayed_tx_timer_event();
-                        }
-                    }
+                    LoRaMacState &= ~LORAMAC_TX_RUNNING;
                 }
                 else
                 {// Procedure for all other frames
@@ -1092,31 +1077,8 @@ LoRaMacStatus_t LoRaMac::LoRaMacStopTxTimer( )
 
 void LoRaMac::OnTxDelayedTimerEvent( void )
 {
-    LoRaMacHeader_t macHdr;
-    LoRaMacFrameCtrl_t fCtrl;
-    AlternateDrParams_t altDr;
-
     TimerStop( &TxDelayedTimer );
     LoRaMacState &= ~LORAMAC_TX_DELAYED;
-
-    if( ( LoRaMacFlags.Bits.MlmeReq == 1 ) && ( MlmeConfirm.MlmeRequest == MLME_JOIN ) )
-    {
-        ResetMacParameters( );
-
-        altDr.NbTrials = JoinRequestTrials + 1;
-        LoRaMacParams.ChannelsDatarate = lora_phy->get_alternate_DR(&altDr);
-
-        macHdr.Value = 0;
-        macHdr.Bits.MType = FRAME_TYPE_JOIN_REQ;
-
-        fCtrl.Value = 0;
-        fCtrl.Bits.Adr = LoRaMacParams.AdrCtrlOn;
-
-        /* In case of join request retransmissions, the stack must prepare
-         * the frame again, because the network server keeps track of the random
-         * LoRaMacDevNonce values to prevent reply attacks. */
-        PrepareFrame( &macHdr, &fCtrl, 0, NULL, 0 );
-    }
 
     ScheduleTx( );
 }
@@ -1638,11 +1600,6 @@ LoRaMacStatus_t LoRaMac::SendFrameOnChannel( uint8_t channel )
     TimerSetValue( &MacStateCheckTimer, MAC_STATE_CHECK_TIMEOUT );
     TimerStart( &MacStateCheckTimer );
 
-    if( IsLoRaMacNetworkJoined == false )
-    {
-        JoinRequestTrials++;
-    }
-
     // Send now
     lora_phy->handle_send(LoRaMacBuffer, LoRaMacBufferPktLen);
 
@@ -1712,8 +1669,6 @@ LoRaMacStatus_t LoRaMac::LoRaMacInitialization(LoRaMacPrimitives_t *primitives,
     LoRaMacDeviceClass = CLASS_A;
     LoRaMacState = LORAMAC_IDLE;
 
-    JoinRequestTrials = 0;
-    MaxJoinRequestTrials = 1;
     RepeaterSupport = false;
 
     // Reset duty cycle times
@@ -2483,10 +2438,6 @@ LoRaMacStatus_t LoRaMac::LoRaMacMlmeRequest( MlmeReq_t *mlmeRequest )
 {
     LoRaMacStatus_t status = LORAMAC_STATUS_SERVICE_UNKNOWN;
     LoRaMacHeader_t macHdr;
-    AlternateDrParams_t altDr;
-    VerifyParams_t verify;
-    GetPhyParams_t getPhy;
-    PhyParam_t phyParam;
 
     if( mlmeRequest == NULL )
     {
@@ -2512,21 +2463,9 @@ LoRaMacStatus_t LoRaMac::LoRaMacMlmeRequest( MlmeReq_t *mlmeRequest )
 
             if( ( mlmeRequest->Req.Join.DevEui == NULL ) ||
                 ( mlmeRequest->Req.Join.AppEui == NULL ) ||
-                ( mlmeRequest->Req.Join.AppKey == NULL ) ||
-                ( mlmeRequest->Req.Join.NbTrials == 0 ) )
+                ( mlmeRequest->Req.Join.AppKey == NULL ) )
             {
                 return LORAMAC_STATUS_PARAMETER_INVALID;
-            }
-
-            // Verify the parameter NbTrials for the join procedure
-            verify.NbJoinTrials = mlmeRequest->Req.Join.NbTrials;
-
-            if(lora_phy->verify(&verify, PHY_NB_JOIN_TRIALS) == false)
-            {
-                // Value not supported, get default
-                getPhy.Attribute = PHY_DEF_NB_JOIN_TRIALS;
-                phyParam = lora_phy->get_phy_params( &getPhy );
-                mlmeRequest->Req.Join.NbTrials = ( uint8_t ) phyParam.Value;
             }
 
             LoRaMacFlags.Bits.MlmeReq = 1;
@@ -2535,10 +2474,6 @@ LoRaMacStatus_t LoRaMac::LoRaMacMlmeRequest( MlmeReq_t *mlmeRequest )
             LoRaMacDevEui = mlmeRequest->Req.Join.DevEui;
             LoRaMacAppEui = mlmeRequest->Req.Join.AppEui;
             LoRaMacAppKey = mlmeRequest->Req.Join.AppKey;
-            MaxJoinRequestTrials = mlmeRequest->Req.Join.NbTrials;
-
-            // Reset variable JoinRequestTrials
-            JoinRequestTrials = 0;
 
             // Setup header information
             macHdr.Value = 0;
@@ -2546,9 +2481,7 @@ LoRaMacStatus_t LoRaMac::LoRaMacMlmeRequest( MlmeReq_t *mlmeRequest )
 
             ResetMacParameters( );
 
-            altDr.NbTrials = JoinRequestTrials + 1;
-
-            LoRaMacParams.ChannelsDatarate = lora_phy->get_alternate_DR(&altDr);
+            LoRaMacParams.ChannelsDatarate = lora_phy->get_alternate_DR(LoRaMacParams.ChannelsDatarate);
 
             status = Send( &macHdr, 0, NULL, 0 );
             break;

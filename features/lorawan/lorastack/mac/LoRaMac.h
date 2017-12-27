@@ -875,16 +875,6 @@ private:
     TimerTime_t TxTimeOnAir;
 
     /*!
-     * Number of trials for the Join Request
-     */
-    uint8_t JoinRequestTrials;
-
-    /*!
-     * Maximum number of trials for the Join Request
-     */
-    uint8_t MaxJoinRequestTrials;
-
-    /*!
      * Structure to hold MCPS indication data.
      */
     McpsIndication_t McpsIndication;

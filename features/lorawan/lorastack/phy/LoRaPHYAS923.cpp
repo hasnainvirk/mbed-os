@@ -544,12 +544,6 @@ PhyParam_t LoRaPHYAS923::get_phy_params(GetPhyParams_t* getPhy)
             phyParam.fValue = AS923_DEFAULT_ANTENNA_GAIN;
             break;
         }
-        case PHY_NB_JOIN_TRIALS:
-        case PHY_DEF_NB_JOIN_TRIALS:
-        {
-            phyParam.Value = 1;
-            break;
-        }
         default:
         {
             break;
@@ -634,10 +628,6 @@ bool LoRaPHYAS923::verify(VerifyParams_t* verify, PhyAttribute_t phyAttribute)
         case PHY_DUTY_CYCLE:
         {
             return AS923_DUTY_CYCLE_ENABLED;
-        }
-        case PHY_NB_JOIN_TRIALS:
-        {
-            return true;
         }
         default:
             return false;
@@ -1123,7 +1113,7 @@ uint8_t LoRaPHYAS923::dl_channel_request(DlChannelReqParams_t* dlChannelReq)
     return status;
 }
 
-int8_t LoRaPHYAS923::get_alternate_DR(AlternateDrParams_t* alternateDr)
+int8_t LoRaPHYAS923::get_alternate_DR(int8_t currentDr)
 {
     // Only AS923_DWELL_LIMIT_DATARATE is supported
     return AS923_DWELL_LIMIT_DATARATE;
