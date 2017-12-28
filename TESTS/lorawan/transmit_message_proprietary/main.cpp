@@ -196,6 +196,8 @@ static lorawan_app_callbacks_t callbacks;
 int main() {
     t.start(callback(&ev_queue, &EventQueue::dispatch_forever));
 
+    lorawan.initialize(&ev_queue);
+
     callbacks.events = mbed::callback(lora_event_handler);
 
     lorawan.add_app_callbacks(&callbacks);
