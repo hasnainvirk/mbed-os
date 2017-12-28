@@ -1639,6 +1639,18 @@ typedef enum eLoRaMacStatus
      */
     LORAMAC_STATUS_REGION_NOT_SUPPORTED,
     /*!
+     *
+     */
+    LORAMAC_STATUS_DUTYCYCLE_RESTRICTED,
+     /*!
+      *
+      */
+    LORAMAC_STATUS_NO_CHANNEL_FOUND,
+     /*!
+      *
+      */
+    LORAMAC_STATUS_NO_FREE_CHANNEL_FOUND,
+    /*!
      * Crypto methods failure.
      */
     LORAMAC_STATUS_CRYPTO_FAIL,

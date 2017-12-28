@@ -1135,9 +1135,9 @@ void LoRaPHYAS923::calculate_backoff(CalcBackOffParams_t* calcBackOff)
     get_DC_backoff( &calcBackOffParams );
 }
 
-bool LoRaPHYAS923::set_next_channel(NextChanParams_t* nextChanParams,
-                                    uint8_t* channel, TimerTime_t* time,
-                                    TimerTime_t* aggregatedTimeOff)
+LoRaMacStatus_t LoRaPHYAS923::set_next_channel(NextChanParams_t* nextChanParams,
+                                               uint8_t* channel, TimerTime_t* time,
+                                               TimerTime_t* aggregatedTimeOff)
 {
     uint8_t channelNext = 0;
     uint8_t nbEnabledChannels = 0;
@@ -1186,10 +1186,10 @@ bool LoRaPHYAS923::set_next_channel(NextChanParams_t* nextChanParams,
                 // Free channel found
                 *channel = channelNext;
                 *time = 0;
-                return true;
+                return LORAMAC_STATUS_OK;
             }
         }
-        return false;
+        return LORAMAC_STATUS_NO_FREE_CHANNEL_FOUND;
     }
     else
     {
@@ -1197,12 +1197,12 @@ bool LoRaPHYAS923::set_next_channel(NextChanParams_t* nextChanParams,
         {
             // Delay transmission due to AggregatedTimeOff or to a band time off
             *time = nextTxDelay;
-            return true;
+            return LORAMAC_STATUS_DUTYCYCLE_RESTRICTED;
         }
         // Datarate not supported by any channel, restore defaults
         ChannelsMask[0] |= LC( 1 ) + LC( 2 );
         *time = 0;
-        return false;
+        return LORAMAC_STATUS_NO_CHANNEL_FOUND;
     }
 }
 

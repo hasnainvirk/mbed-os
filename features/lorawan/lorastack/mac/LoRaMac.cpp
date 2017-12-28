@@ -1223,6 +1223,7 @@ LoRaMacStatus_t LoRaMac::Send( LoRaMacHeader_t *macHdr, uint8_t fPort, void *fBu
 
 LoRaMacStatus_t LoRaMac::ScheduleTx( void )
 {
+    LoRaMacStatus_t status = LORAMAC_STATUS_PARAMETER_INVALID;
     TimerTime_t dutyCycleTimeOff = 0;
     NextChanParams_t nextChan;
 
@@ -1247,14 +1248,29 @@ LoRaMacStatus_t LoRaMac::ScheduleTx( void )
     nextChan.LastAggrTx = AggregatedLastTxDoneTime;
 
     // Select channel
-    while( lora_phy->set_next_channel(&nextChan, &Channel, &dutyCycleTimeOff, &AggregatedTimeOff ) == false )
+    status = lora_phy->set_next_channel(&nextChan, &Channel, &dutyCycleTimeOff, &AggregatedTimeOff );
+    switch( status )
     {
-        // Set the default datarate
-        LoRaMacParams.ChannelsDatarate = LoRaMacParamsDefaults.ChannelsDatarate;
-        // Update datarate in the function parameters
-        nextChan.Datarate = LoRaMacParams.ChannelsDatarate;
-    }
+    case LORAMAC_STATUS_NO_CHANNEL_FOUND:
+        return LORAMAC_STATUS_NO_CHANNEL_FOUND;
 
+    case LORAMAC_STATUS_NO_FREE_CHANNEL_FOUND:
+        return LORAMAC_STATUS_NO_FREE_CHANNEL_FOUND;
+
+    case LORAMAC_STATUS_DUTYCYCLE_RESTRICTED:
+        if( dutyCycleTimeOff != 0 )
+        {
+            // Send later - prepare timer
+            LoRaMacState |= LORAMAC_TX_DELAYED;
+            tr_debug("Next Transmission in %lu ms", dutyCycleTimeOff);
+            TimerSetValue( &TxDelayedTimer, dutyCycleTimeOff );
+            TimerStart( &TxDelayedTimer );
+        }
+        return LORAMAC_STATUS_OK;
+
+    default:
+        break;
+    }
     tr_debug("Next Channel Idx=%d, DR=%d", Channel, nextChan.Datarate);
 
     // Compute Rx1 windows parameters
@@ -1286,23 +1302,8 @@ LoRaMacStatus_t LoRaMac::ScheduleTx( void )
         RxWindow2Delay = LoRaMacParams.ReceiveDelay2 + RxWindow2Config.WindowOffset;
     }
 
-    // Schedule transmission of frame
-    if( dutyCycleTimeOff == 0 )
-    {
-        // Try to send now
-        return SendFrameOnChannel( Channel );
-    }
-    else
-    {
-        // Send later - prepare timer
-        LoRaMacState |= LORAMAC_TX_DELAYED;
-        tr_debug("Next Transmission in %lu ms", dutyCycleTimeOff);
-
-        TimerSetValue( &TxDelayedTimer, dutyCycleTimeOff );
-        TimerStart( &TxDelayedTimer );
-
-        return LORAMAC_STATUS_OK;
-    }
+    // Try to send now
+    return SendFrameOnChannel( Channel );
 }
 
 void LoRaMac::CalculateBackOff( uint8_t channel )

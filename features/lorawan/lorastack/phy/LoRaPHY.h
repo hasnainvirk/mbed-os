@@ -295,9 +295,9 @@ public:
      *
      * \retval Function status [1: OK, 0: Unable to find a channel on the current datarate].
      */
-    virtual bool set_next_channel(NextChanParams_t* nextChanParams,
-                                   uint8_t* channel, TimerTime_t* time,
-                                   TimerTime_t* aggregatedTimeOff ) = 0;
+    virtual LoRaMacStatus_t set_next_channel(NextChanParams_t* nextChanParams,
+                                             uint8_t* channel, TimerTime_t* time,
+                                             TimerTime_t* aggregatedTimeOff ) = 0;
 
     /*!
      * \brief Adds a channel.
