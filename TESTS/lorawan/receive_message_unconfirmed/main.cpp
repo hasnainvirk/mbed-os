@@ -301,7 +301,7 @@ int main() {
 
     lorawan.initialize(&ev_queue);
 
-    callbacks.lorawan_events = mbed::callback(lora_event_handler);
+    callbacks.events = mbed::callback(lora_event_handler);
 
     lorawan.add_app_callbacks(&callbacks);
 
