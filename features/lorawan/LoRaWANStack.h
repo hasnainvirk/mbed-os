@@ -440,6 +440,8 @@ private:
     uint8_t _num_retry;
     events::EventQueue *_queue;
     bool _duty_cycle_on;
+
+    uint8_t join_attempt;
 };
 
 #endif /* LORAWANSTACK_H_ */

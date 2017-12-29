@@ -147,6 +147,8 @@ LoRaWANStack::LoRaWANStack()
      memset(&_lw_session, 0, sizeof(_lw_session));
      memset(&_tx_msg, 0, sizeof(_tx_msg));
      memset(&_rx_msg, 0, sizeof(_rx_msg));
+
+     join_attempt = 0;
 }
 
 LoRaWANStack::~LoRaWANStack()
@@ -743,6 +745,8 @@ void LoRaWANStack::commission_device(const lora_dev_commission_t &commission_dat
                 commission_data.connection.connection_u.otaa.app_key;
         _lw_session.connection.connection_u.otaa.dev_eui =
                 commission_data.connection.connection_u.otaa.dev_eui;
+        _lw_session.connection.connection_u.otaa.datarate =
+                commission_data.connection.connection_u.otaa.datarate;
     } else {
         _lw_session.connection.connection_u.abp.dev_addr =
                 commission_data.connection.connection_u.abp.dev_addr;
@@ -769,10 +773,13 @@ lora_mac_status_t LoRaWANStack::join_request_by_otaa(const lorawan_connect_t &pa
 
     tr_debug("Initiating OTAA");
 
+    join_attempt++;
+
     commission.connection.connect_type = LORAWAN_CONNECTION_OTAA;
     commission.connection.connection_u.otaa.dev_eui = params.connection_u.otaa.dev_eui;
     commission.connection.connection_u.otaa.app_eui = params.connection_u.otaa.app_eui;
     commission.connection.connection_u.otaa.app_key = params.connection_u.otaa.app_key;
+    commission.connection.connection_u.otaa.datarate = params.connection_u.otaa.datarate;
 
     // As mentioned in the comment above, in 1.0.2 spec, counters are always set
     // to zero for new connection. This section is common for both normal and
@@ -1019,6 +1026,7 @@ lora_mac_status_t LoRaWANStack::mlme_request_handler(lora_mac_mlme_req_t *mlme_r
             request.Req.Join.AppEui = mlme_request->req.join.app_eui;
             request.Req.Join.AppKey = mlme_request->req.join.app_key;
             request.Req.Join.DevEui = mlme_request->req.join.dev_eui;
+            request.Req.Join.Datarate = mlme_request->req.join.datarate;
             break;
         // This is handled in semtech stack. Only type value is needed.
         case LORA_MLME_LINK_CHECK:
@@ -1053,16 +1061,40 @@ void LoRaWANStack::mlme_confirm_handler(lora_mac_mlme_confirm_t *mlme_confirm)
     switch (mlme_confirm->mlme_request) {
         case LORA_MLME_JOIN:
             if (mlme_confirm->status == LORA_EVENT_INFO_STATUS_OK) {
+                join_attempt = 0;
                 // Status is OK, node has joined the network
                 set_device_state(DEVICE_STATE_JOINED);
                 lora_state_machine();
             } else {
-                // Join attempt failed.
-                set_device_state(DEVICE_STATE_IDLE);
-                lora_state_machine();
+                if (join_attempt < LORAWAN_NB_TRIALS) {
+                    tr_debug("JOIN failed. Retrying (attempt %d)...", join_attempt + 1);
 
-                if (_callbacks.events) {
-                    _queue->call(_callbacks.events, JOIN_FAILURE);
+                    lorawan_connect_t connection_params;
+                    connection_params.connect_type = LORAWAN_CONNECTION_OTAA;
+                    connection_params.connection_u.otaa.app_eui = _lw_session.connection.connection_u.otaa.app_eui;
+                    connection_params.connection_u.otaa.dev_eui = _lw_session.connection.connection_u.otaa.dev_eui;
+                    connection_params.connection_u.otaa.app_key = _lw_session.connection.connection_u.otaa.app_key;
+
+                    // Try with next DR. TODO: CHECK DR IS VALID!
+                    connection_params.connection_u.otaa.datarate = _lw_session.connection.connection_u.otaa.datarate - 1;
+
+                    const lora_mac_status_t status = join_request_by_otaa(connection_params);
+                    if (status != LORA_MAC_STATUS_CONNECT_IN_PROGRESS) {
+                        if (_callbacks.events) {
+                            _queue->call(_callbacks.events, JOIN_FAILURE);
+                        }
+                    }
+                } else {
+                    tr_warn("JOIN failed. Max number of attempts reached.");
+                    join_attempt = 0;
+
+                    // Join attempt failed.
+                    set_device_state(DEVICE_STATE_IDLE);
+                    lora_state_machine();
+
+                    if (_callbacks.events) {
+                        _queue->call(_callbacks.events, JOIN_FAILURE);
+                    }
                 }
             }
             break;
@@ -1387,6 +1419,7 @@ void LoRaWANStack::compliance_test_handler(lora_mac_mcps_indication_t *mcps_indi
             mlme_request.req.join.dev_eui = _lw_session.connection.connection_u.otaa.dev_eui;
             mlme_request.req.join.app_eui = _lw_session.connection.connection_u.otaa.app_eui;
             mlme_request.req.join.app_key = _lw_session.connection.connection_u.otaa.app_key;
+            mlme_request.req.join.datarate = _lw_session.connection.connection_u.otaa.datarate;
             mlme_request_handler(&mlme_request);
             break;
         case 7: // (x)
@@ -1871,6 +1904,7 @@ lora_mac_status_t LoRaWANStack::lora_state_machine()
                 mlme_req.req.join.dev_eui = _lw_session.connection.connection_u.otaa.dev_eui;
                 mlme_req.req.join.app_eui = _lw_session.connection.connection_u.otaa.app_eui;
                 mlme_req.req.join.app_key = _lw_session.connection.connection_u.otaa.app_key;
+                mlme_req.req.join.datarate = _lw_session.connection.connection_u.otaa.datarate;
 
                 // Send join request to server.
                 status = mlme_request_handler(&mlme_req);

@@ -73,6 +73,7 @@ lora_mac_status_t LoRaWANInterface::connect()
         connection_params.connection_u.otaa.app_eui = app_eui;
         connection_params.connection_u.otaa.dev_eui = dev_eui;
         connection_params.connection_u.otaa.app_key = app_key;
+        connection_params.connection_u.otaa.datarate = DR_5; // TODO: Check region specific initial DR
 
         return connect(connection_params);
     } else {

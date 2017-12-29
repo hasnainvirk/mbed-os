@@ -2469,20 +2469,19 @@ LoRaMacStatus_t LoRaMac::LoRaMacMlmeRequest( MlmeReq_t *mlmeRequest )
                 return LORAMAC_STATUS_PARAMETER_INVALID;
             }
 
+            ResetMacParameters( );
+
             LoRaMacFlags.Bits.MlmeReq = 1;
             MlmeConfirm.MlmeRequest = mlmeRequest->Type;
 
             LoRaMacDevEui = mlmeRequest->Req.Join.DevEui;
             LoRaMacAppEui = mlmeRequest->Req.Join.AppEui;
             LoRaMacAppKey = mlmeRequest->Req.Join.AppKey;
+            LoRaMacParams.ChannelsDatarate = lora_phy->get_alternate_DR(mlmeRequest->Req.Join.Datarate);
 
             // Setup header information
             macHdr.Value = 0;
             macHdr.Bits.MType  = FRAME_TYPE_JOIN_REQ;
-
-            ResetMacParameters( );
-
-            LoRaMacParams.ChannelsDatarate = lora_phy->get_alternate_DR(LoRaMacParams.ChannelsDatarate);
 
             status = Send( &macHdr, 0, NULL, 0 );
             break;

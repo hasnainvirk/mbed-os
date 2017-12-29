@@ -1039,6 +1039,10 @@ typedef struct sMlmeReqJoin
      * LoRaWAN Specification V1.0.2, chapter 6.2.2.
      */
     uint8_t *AppKey;
+    /*!
+     * Datarate used for join request.
+     */
+    uint8_t Datarate;
 }MlmeReqJoin_t;
 
 /*!
@@ -1927,6 +1931,10 @@ typedef struct lorawan_connect_otaa {
      * LoRaWAN Specification V1.0.2, chapter 6.2.2
      */
     uint8_t *app_key;
+    /*!
+     * Datarate used for join request.
+     */
+    uint8_t datarate;
 } lorawan_connect_otaa_t;
 
 /** The lorawan_connect_abp structure.
