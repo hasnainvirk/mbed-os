@@ -897,7 +897,9 @@ int16_t LoRaWANStack::handle_tx(uint8_t port, const uint8_t* data,
         _tx_msg.f_buffer_size = length;
         _tx_msg.pending_size = 0;
         // copy user buffer upto the max_possible_size
-        memcpy(_tx_msg.f_buffer, data, length);
+        if (data && length > 0) {
+            memcpy(_tx_msg.f_buffer, data, length);
+        }
     }
 
     // Handles all unconfirmed messages, including proprietary and multicast
@@ -1273,6 +1275,14 @@ void LoRaWANStack::mcps_indication_handler(lora_mac_mcps_indication_t *mcps_indi
                 _rx_msg.receive_ready = true;
                 if (_callbacks.events) {
                     _queue->call(_callbacks.events, RX_DONE);
+                }
+
+                // If fPending bit is set we try to generate an empty packet
+                // with CONFIRMED flag set. We always set a CONFIRMED flag so
+                // that we could retry a certain number of times if the uplink
+                // failed for some reason
+                if (mcps_indication->frame_pending) {
+                    handle_tx(mcps_indication->port, NULL, 0, MSG_CONFIRMED_FLAG);
                 }
             } else {
                 // Invalid port, ports 0, 224 and 225-255 are reserved.
