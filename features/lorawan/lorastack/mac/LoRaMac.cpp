@@ -2708,11 +2708,11 @@ LoRaMacStatus_t LoRaMac::LoRaMacMcpsRequest( McpsReq_t *mcpsRequest )
 
 radio_events_t *LoRaMac::GetPhyEventHandlers()
 {
-    RadioEvents.tx_done = handle_tx_done;
-    RadioEvents.rx_done = handle_rx_done;
-    RadioEvents.rx_error = handle_rx_error;
-    RadioEvents.tx_timeout = handle_tx_timeout;
-    RadioEvents.rx_timeout = handle_rx_timeout;
+    RadioEvents.tx_done = mbed::callback(handle_tx_done);
+    RadioEvents.rx_done = mbed::callback(handle_rx_done);
+    RadioEvents.rx_error = mbed::callback(handle_rx_error);
+    RadioEvents.tx_timeout = mbed::callback(handle_tx_timeout);
+    RadioEvents.rx_timeout = mbed::callback(handle_rx_timeout);
 
     return &RadioEvents;
 }
