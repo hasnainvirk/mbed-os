@@ -429,7 +429,10 @@ private:
 
     LoRaMac _loramac;
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
     compliance_test_t _compliance_test;
+#endif
+
     device_states_t _device_current_state;
     lorawan_app_callbacks_t _callbacks;
     radio_events_t *_mac_handlers;
