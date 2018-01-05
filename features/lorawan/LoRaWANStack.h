@@ -313,11 +313,6 @@ private:
     void set_device_state(device_states_t new_state);
 
     /**
-     * This function is used only for compliance testing
-     */
-    void prepare_special_tx_frame(uint8_t port);
-
-    /**
      * Hands over the packet to Mac layer by posting an MCPS request.
      */
     lora_mac_status_t send_frame_to_mac();
@@ -412,6 +407,12 @@ private:
      */
     uint16_t check_possible_tx_size(uint16_t size);
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
+    /**
+     * This function is used only for compliance testing
+     */
+    void prepare_special_tx_frame(uint8_t port);
+
     /**
      * Used only for compliance testing
      */
@@ -421,6 +422,7 @@ private:
      * Used only for compliance testing
      */
     lora_mac_status_t send_compliance_test_frame_to_mac();
+#endif
 
     /**
      * converts error codes from Mac layer to controller layer
