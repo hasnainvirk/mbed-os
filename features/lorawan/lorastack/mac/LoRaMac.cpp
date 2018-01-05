@@ -1075,21 +1075,6 @@ void LoRaMac::OnMacStateCheckTimerEvent( void )
     }
 }
 
-LoRaMacStatus_t LoRaMac::LoRaMacSetTxTimer( uint32_t TxDutyCycleTime )
-{
-    TimerSetValue(&TxNextPacketTimer, TxDutyCycleTime);
-    TimerStart(&TxNextPacketTimer);
-
-    return LORAMAC_STATUS_OK;
-}
-
-LoRaMacStatus_t LoRaMac::LoRaMacStopTxTimer( )
-{
-    TimerStop(&TxNextPacketTimer);
-
-    return LORAMAC_STATUS_OK;
-}
-
 void LoRaMac::OnTxDelayedTimerEvent( void )
 {
     LoRaMacHeader_t macHdr;
@@ -2717,9 +2702,26 @@ radio_events_t *LoRaMac::GetPhyEventHandlers()
     return &RadioEvents;
 }
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
 /***************************************************************************
-* TODO: Something related to Testing ? Need to figure out what is it       *
+ * Compliance testing                                                      *
  **************************************************************************/
+
+LoRaMacStatus_t LoRaMac::LoRaMacSetTxTimer( uint32_t TxDutyCycleTime )
+{
+    TimerSetValue(&TxNextPacketTimer, TxDutyCycleTime);
+    TimerStart(&TxNextPacketTimer);
+
+    return LORAMAC_STATUS_OK;
+}
+
+LoRaMacStatus_t LoRaMac::LoRaMacStopTxTimer( )
+{
+    TimerStop(&TxNextPacketTimer);
+
+    return LORAMAC_STATUS_OK;
+}
+
 void LoRaMac::LoRaMacTestRxWindowsOn( bool enable )
 {
     IsRxWindowsEnabled = enable;
@@ -2747,3 +2749,4 @@ void LoRaMac::LoRaMacTestSetChannel( uint8_t channel )
 {
     Channel = channel;
 }
+#endif

@@ -332,6 +332,7 @@ public:
      */
     void SetMlmeScheduleUplinkIndication( void );
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
 public: // Test interface
 
     /**
@@ -397,6 +398,13 @@ public: // Test interface
      * \param   [in] channel - Channel index
      */
     void LoRaMacTestSetChannel( uint8_t channel );
+
+private:
+    /**
+     * Timer to handle the application data transmission duty cycle
+     */
+    TimerEvent_t TxNextPacketTimer;
+#endif
 
 private:
     /*!
@@ -808,11 +816,6 @@ private:
      * LoRaMac timer used to check the LoRaMacState (runs every second)
      */
     TimerEvent_t MacStateCheckTimer;
-
-    /**
-     * Timer to handle the application data transmission duty cycle
-     */
-    TimerEvent_t TxNextPacketTimer;
 
     /*!
      * LoRaMac upper layer event functions
