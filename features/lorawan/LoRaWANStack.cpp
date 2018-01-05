@@ -87,16 +87,18 @@ static Mcps_t interpret_mcps_confirm_type(const lora_mac_mcps_t& local);
 static Mib_t interpret_mib_req_confirm_type(const lora_mac_mib_t& mib_local);
 static lora_mac_event_info_status_t interpret_event_info_type(const LoRaMacEventInfoStatus_t& remote);
 
-/**
- *
- * User application data buffer size if compliance test is used
- */
-#if (MBED_CONF_LORA_PHY == 0 || MBED_CONF_LORA_PHY == 4 || MBED_CONF_LORA_PHY == 6 || MBED_CONF_LORA_PHY == 7)
-#define LORAWAN_COMPLIANCE_TEST_DATA_SIZE                  16
-#elif (MBED_CONF_LORA_PHY == 1 || MBED_CONF_LORA_PHY == 2 || MBED_CONF_LORA_PHY == 8 || MBED_CONF_LORA_PHY == 9)
-#define LORAWAN_COMPLIANCE_TEST_DATA_SIZE                  11
-#else
-#error "Must set LoRa PHY layer parameters."
+#if defined(LORAWAN_COMPLIANCE_TEST)
+    /**
+     *
+     * User application data buffer size if compliance test is used
+     */
+    #if (MBED_CONF_LORA_PHY == 0 || MBED_CONF_LORA_PHY == 4 || MBED_CONF_LORA_PHY == 6 || MBED_CONF_LORA_PHY == 7)
+        #define LORAWAN_COMPLIANCE_TEST_DATA_SIZE                  16
+    #elif (MBED_CONF_LORA_PHY == 1 || MBED_CONF_LORA_PHY == 2 || MBED_CONF_LORA_PHY == 8 || MBED_CONF_LORA_PHY == 9)
+        #define LORAWAN_COMPLIANCE_TEST_DATA_SIZE                  11
+    #else
+        #error "Must set LoRa PHY layer parameters."
+    #endif
 #endif
 
 /*****************************************************************************
@@ -182,15 +184,20 @@ lora_mac_status_t LoRaWANStack::initialize_mac_layer(EventQueue *queue)
     static LoRaMacPrimitives_t LoRaMacPrimitives;
     static LoRaMacCallback_t LoRaMacCallbacks;
     static lora_mac_mib_request_confirm_t mib_req;
+
+#if defined(LORAWAN_COMPLIANCE_TEST)
     static uint8_t compliance_test_buffer[LORAWAN_TX_MAX_SIZE];
+#endif
 
     tr_debug("Initializing MAC layer");
 
     //store a pointer to Event Queue
     _queue = queue;
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
     // Allocate memory for compliance test
     _compliance_test.app_data_buffer = compliance_test_buffer;
+#endif
 
     TimerTimeCounterInit(queue);
     LoRaMacPrimitives.MacMcpsConfirm = callback(this, &LoRaWANStack::mcps_confirm);
@@ -216,6 +223,7 @@ lora_mac_status_t LoRaWANStack::initialize_mac_layer(EventQueue *queue)
     return lora_state_machine();
 }
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
 /**
  *
  * Prepares the upload message to reserved ports
@@ -302,6 +310,7 @@ lora_mac_status_t LoRaWANStack::send_compliance_test_frame_to_mac()
 
     return mcps_request_handler(&mcps_req);
 }
+#endif
 
 uint16_t LoRaWANStack::check_possible_tx_size(uint16_t size)
 {
@@ -843,9 +852,11 @@ int16_t LoRaWANStack::handle_tx(uint8_t port, const uint8_t* data,
         return LORA_MAC_STATUS_WOULD_BLOCK;
     }
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
     if (_compliance_test.running) {
         return LORA_MAC_STATUS_COMPLIANCE_TEST_ON;
     }
+#endif
 
     lora_mac_mib_request_confirm_t mib_req;
     lora_mac_status_t status;
@@ -942,9 +953,11 @@ int16_t LoRaWANStack::handle_rx(const uint8_t port, uint8_t* data,
         return LORA_MAC_STATUS_WOULD_BLOCK;
     }
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
     if (_compliance_test.running) {
         return LORA_MAC_STATUS_COMPLIANCE_TEST_ON;
     }
+#endif
 
     if (data == NULL) {
         return LORA_MAC_STATUS_PARAMETER_INVALID;
@@ -1077,11 +1090,14 @@ void LoRaWANStack::mlme_confirm_handler(lora_mac_mlme_confirm_t *mlme_confirm)
             if (mlme_confirm->status == LORA_EVENT_INFO_STATUS_OK) {
                 // Check DemodMargin
                 // Check NbGateways
+#if defined(LORAWAN_COMPLIANCE_TEST)
                 if (_compliance_test.running == true) {
                     _compliance_test.link_check = true;
                     _compliance_test.demod_margin = mlme_confirm->demod_margin;
                     _compliance_test.nb_gateways = mlme_confirm->nb_gateways;
-                } else {
+                } else
+#endif
+                {
                     // normal operation as oppose to compliance testing
                     if (_callbacks.link_check_resp) {
                         _queue->call(_callbacks.link_check_resp, mlme_confirm->demod_margin,
@@ -1237,15 +1253,21 @@ void LoRaWANStack::mcps_indication_handler(lora_mac_mcps_indication_t *mcps_indi
 
     _lw_session.downlink_counter++;
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
     if (_compliance_test.running == true) {
         _compliance_test.downlink_counter++;
     }
+#endif
 
     if (mcps_indication->rx_data == true) {
         switch (mcps_indication->port) {
         case 224:
+#if defined(LORAWAN_COMPLIANCE_TEST)
             tr_debug("Compliance test command received.");
             compliance_test_handler(mcps_indication);
+#else
+            tr_debug("Compliance test disabled.");
+#endif
             break;
         default:
             if (is_port_valid(mcps_indication->port) == true ||
@@ -1292,6 +1314,7 @@ void LoRaWANStack::mcps_indication_handler(lora_mac_mcps_indication_t *mcps_indi
     }
 }
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
 /** Compliance testing function
  *
  * \param mcps_indication   Pointer to the indication structure,
@@ -1425,6 +1448,7 @@ void LoRaWANStack::compliance_test_handler(lora_mac_mcps_indication_t *mcps_indi
         }
     }
 }
+#endif
 
 lora_mac_status_t LoRaWANStack::mib_set_request(lora_mac_mib_request_confirm_t *mib_set_params)
 {
@@ -1844,7 +1868,9 @@ lora_mac_status_t LoRaWANStack::lora_state_machine()
             drop_channel_list();
 
             // Stop sending messages and set joined status to false.
+#if defined(LORAWAN_COMPLIANCE_TEST)
             _loramac.LoRaMacStopTxTimer();
+#endif
             mib_req.type = LORA_MIB_NETWORK_JOINED;
             mib_req.param.is_network_joined = false;
             mib_set_request(&mib_req);
@@ -1978,6 +2004,7 @@ lora_mac_status_t LoRaWANStack::lora_state_machine()
             //Do nothing
             status = LORA_MAC_STATUS_IDLE;
             break;
+#if defined(LORAWAN_COMPLIANCE_TEST)
         case DEVICE_STATE_COMPLIANCE_TEST:
             //Device is in compliance test mode
             tr_debug("Device is in compliance test mode.");
@@ -1989,6 +2016,7 @@ lora_mac_status_t LoRaWANStack::lora_state_machine()
             }
             status = LORA_MAC_STATUS_COMPLIANCE_TEST_ON;
             break;
+#endif
         default:
             status = LORA_MAC_STATUS_SERVICE_UNKNOWN;
             break;

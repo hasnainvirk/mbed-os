@@ -1889,7 +1889,9 @@ typedef enum device_states {
     DEVICE_STATE_JOINED,
     DEVICE_STATE_SEND,
     DEVICE_STATE_IDLE,
+#if defined(LORAWAN_COMPLIANCE_TEST)
     DEVICE_STATE_COMPLIANCE_TEST,
+#endif
     DEVICE_STATE_SHUTDOWN
 } device_states_t;
 
@@ -2133,7 +2135,9 @@ typedef enum lora_mac_status {
     LORA_MAC_STATUS_CONNECT_IN_PROGRESS = -1016,    /**< Services started - Connection in progress */
     LORA_MAC_STATUS_NO_ACTIVE_SESSIONS = -1017,            /**< Services not started - No active session */
     LORA_MAC_STATUS_IDLE = -1018,                   /**< Services started - Idle at the moment */
-    LORA_MAC_STATUS_COMPLIANCE_TEST_ON = -1019         /**< Compliance test - is on-going */
+#if defined(LORAWAN_COMPLIANCE_TEST)
+    LORA_MAC_STATUS_COMPLIANCE_TEST_ON = -1019,         /**< Compliance test - is on-going */
+#endif
 } lora_mac_status_t;
 
 /**
@@ -2823,6 +2827,7 @@ typedef struct lora_mac_mib_request_confirm {
     lora_mac_mib_param_t param;
 } lora_mac_mib_request_confirm_t;
 
+#if defined(LORAWAN_COMPLIANCE_TEST)
 /**  LoRaWAN compliance tests support data
  *
  */
@@ -2868,6 +2873,7 @@ typedef struct compliance_test {
      */
     uint8_t nb_gateways;
 } compliance_test_t;
+#endif
 
 /** Structure containing the uplink status
  *
