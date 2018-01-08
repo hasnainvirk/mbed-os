@@ -34,43 +34,6 @@ using namespace utest::v1;
 using namespace rtos;
 using namespace events;
 
-#ifndef MBED_CONF_LORA_PHY
-#error "Must set LoRa PHY layer parameters."
-#else
-#if MBED_CONF_LORA_PHY      == 0
- #include "LoRaPHYEU868.h"
- static LoRaPHYEU868 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 1
-#include "LoRaPHYAS923.h"
-static LoRaPHYAS923 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 2
-#include "LoRaPHYAU915.h"
-static LoRaPHYAU915 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 3
-#include "LoRaPHYCN470.h"
-static LoRaPHYCN470 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 4
-#include "LoRaPHYCN779.h"
-static LoRaPHYCN779 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 5
-#include "LoRaPHYEU433.h"
-static LoRaPHYEU433 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 6
-#include "LoRaPHYIN865.h"
-static LoRaPHYIN865 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 7
-#include "LoRaPHYKR920.h"
-static LoRaPHYKR920 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 8
-#include "LoRaPHYUS915.h"
-static LoRaPHYUS915 lora_phy;
-#elif MBED_CONF_LORA_PHY    == 9
-#include "LoRaPHYUS915Hybrid.h"
-static LoRaPHYUS915Hybrid lora_phy;
-#else
-#error "Must set LoRa PHY layer parameters."
-#endif
-#endif
 
 #ifdef MBED_CONF_APP_TEST_EVENTS_SIZE
  #define MAX_NUMBER_OF_EVENTS    MBED_CONF_APP_TEST_EVENTS_SIZE
