@@ -22,19 +22,8 @@ SPDX-License-Identifier: BSD-3-Clause
 #define MBED_LORAWAN_SYS_TIMER_H__
 
 #include <stdint.h>
-#include "drivers/Ticker.h"
 #include "lorawan/system/lorawan_data_structures.h"
 #include "events/EventQueue.h"
-
-/*!
- * \brief Timer object description
- */
-typedef struct TimerEvent_s
-{
-    uint32_t value;
-    mbed::Callback<void()> Callback;
-    mbed::Ticker Timer;
-}TimerEvent_t;
 
 class LoRaWANTimeHandler
 {
