@@ -53,12 +53,12 @@ void LoRaWANTimeHandler::TimerInit( TimerEvent_t *obj, mbed::Callback<void()> ca
 
 void LoRaWANTimeHandler::TimerStart( TimerEvent_t *obj )
 {
-    obj->Timer.attach_us(obj->Callback, obj->value * 1000 );
+    obj->Timer.get()->attach_us(obj->Callback, obj->value * 1000 );
 }
 
 void LoRaWANTimeHandler::TimerStop( TimerEvent_t *obj )
 {
-    obj->Timer.detach( );
+    obj->Timer.get()->detach( );
 }
 
 void LoRaWANTimeHandler::TimerSetValue( TimerEvent_t *obj, uint32_t value )
