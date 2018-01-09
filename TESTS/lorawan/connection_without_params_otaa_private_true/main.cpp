@@ -18,105 +18,9 @@
 #include "unity/unity.h"
 #include "greentea-client/test_env.h"
 
-#include "rtos/Thread.h"
-#include "events/EventQueue.h"
-
-#if TARGET_MTS_MDOT_F411RE
-#include "SX1272_LoRaRadio.h"
-#endif
-
-#if defined(TARGET_K64F) || defined(TARGET_DISCO_L072CZ_LRWAN1)
-#include "SX1276_LoRaRadio.h"
-#endif
-#include "LoRaWANInterface.h"
+#include "../lorawan_test_generic.h"
 
 using namespace utest::v1;
-using namespace rtos;
-using namespace events;
-
-void lora_event_handler(lora_events_t events);
-
-#if TARGET_MTS_MDOT_F411RE
-    SX1272_LoRaRadio Radio(LORA_MOSI, LORA_MISO, LORA_SCK, LORA_NSS, LORA_RESET,
-                           LORA_DIO0, LORA_DIO1, LORA_DIO2, LORA_DIO3, LORA_DIO4,
-                           LORA_DIO5, NC, NC, LORA_TXCTL, LORA_RXCTL, NC, NC);
-#endif
-#if TARGET_K64F
-    SX1276_LoRaRadio Radio(D11, D12, D13, D10, A0,
-                           D2, D3, D4, D5, D8,
-                           D9, NC, NC, NC, NC, A4, NC, NC);
-#endif
-
-#if defined(TARGET_DISCO_L072CZ_LRWAN1)
-    #define LORA_SPI_MOSI   PA_7
-    #define LORA_SPI_MISO   PA_6
-    #define LORA_SPI_SCLK   PB_3
-    #define LORA_CS         PA_15
-    #define LORA_RESET      PC_0
-    #define LORA_DIO0       PB_4
-    #define LORA_DIO1       PB_1
-    #define LORA_DIO2       PB_0
-    #define LORA_DIO3       PC_13
-    #define LORA_DIO4       PA_5
-    #define LORA_DIO5       PA_4
-    #define LORA_ANT_RX     PA_1
-    #define LORA_ANT_TX     PC_2
-    #define LORA_ANT_BOOST  PC_1
-    #define LORA_TCXO       PA_12   // 32 MHz
-
-    SX1276_LoRaRadio Radio(LORA_SPI_MOSI, LORA_SPI_MISO, LORA_SPI_SCLK, LORA_CS, LORA_RESET,
-                           LORA_DIO0, LORA_DIO1, LORA_DIO2, LORA_DIO3, LORA_DIO4, NC,
-                           NC, NC, LORA_ANT_TX, LORA_ANT_RX,
-                           NC, LORA_ANT_BOOST, LORA_TCXO);
-#endif
-
-#ifdef MBED_CONF_APP_TEST_EVENTS_SIZE
- #define MAX_NUMBER_OF_EVENTS    MBED_CONF_APP_TEST_EVENTS_SIZE
-#else
- #define MAX_NUMBER_OF_EVENTS   16
-#endif
-
-#ifdef MBED_CONF_APP_TEST_DISPATCH_THREAD_SIZE
- #define TEST_DISPATCH_THREAD_SIZE    MBED_CONF_APP_TEST_DISPATCH_THREAD_SIZE
-#else
- #define TEST_DISPATCH_THREAD_SIZE    2048
-#endif
-
-static EventQueue ev_queue(MAX_NUMBER_OF_EVENTS * EVENTS_EVENT_SIZE);
-
-static Thread t(osPriorityNormal, TEST_DISPATCH_THREAD_SIZE);
-
-class LoRaTestHelper
-{
-public:
-    LoRaTestHelper() :cur_event(0), event_lock(false) {
-        // Fill event buffer
-        memset(event_buffer, 0xFF, sizeof(event_buffer));
-    };
-    ~LoRaTestHelper() {};
-
-    bool find_event(uint8_t event_code);
-
-    uint8_t event_buffer[10];
-    uint8_t cur_event;
-    bool event_lock;
-};
-
-bool LoRaTestHelper::find_event(uint8_t event_code)
-{
-    event_lock = true;
-
-    for (uint8_t i = 0; i < 10; i++) {
-        if (event_buffer[i] == event_code) {
-            event_buffer[i] = 0xFF;
-            event_lock = false;
-            return true;
-        }
-    }
-
-    event_lock = false;
-    return false;
-}
 
 LoRaWANInterface lorawan(Radio);
 LoRaTestHelper lora_helper;
@@ -168,6 +72,14 @@ utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
     return greentea_test_setup_handler(number_of_cases);
 }
 
+void lora_event_handler(lora_events_t events)
+{
+    if (lora_helper.event_lock) {
+        return;
+    }
+    lora_helper.add_event(events);
+}
+
 static lorawan_app_callbacks_t callbacks;
 
 int main() {
@@ -182,12 +94,3 @@ int main() {
     Harness::run(specification);
 }
 
-void lora_event_handler(lora_events_t events)
-{
-    if (lora_helper.event_lock) {
-        return;
-    }
-
-    lora_helper.event_buffer[lora_helper.cur_event % 10] = events;
-    lora_helper.cur_event++;
-}
