@@ -156,7 +156,7 @@ void lora_receive_fill_buffer()
     counter = 0;
 
     lorawan.set_confirmed_msg_retries(1);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     //Ignore send errors on this test
 /* 
@@ -169,7 +169,7 @@ void lora_receive_fill_buffer()
     while (1) {
         // Send new frame after TX_DONE event
         if (lora_helper.find_event(TX_DONE)) {
-            lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+            lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
         }
 
         // Ignore TX_TIMEOUT on this test
