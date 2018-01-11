@@ -87,7 +87,7 @@ void lora_tx_send_empty()
 
     connect_lora();
 
-    ret = lorawan.send(LORAWAN_APP_PORT, &data, 0, MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, &data, 0, MSG_UNCONFIRMED_FLAG);
     if (ret != 0) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -121,7 +121,7 @@ void lora_receive_unconfirmed()
 
     connect_lora();
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -192,7 +192,7 @@ void lora_receive_unconfirmed()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_UNCONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -216,7 +216,7 @@ void lora_receive_confirmed()
     connect_lora();
 
     lorawan.set_confirmed_msg_retries(1);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -288,7 +288,7 @@ void lora_receive_confirmed()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -310,7 +310,7 @@ void lora_tx_send_confirmed()
 
     connect_lora();
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -343,7 +343,7 @@ void lora_tx_send_unconfirmed()
 
     connect_lora();
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -376,7 +376,7 @@ void lora_tx_send_proprietary()
 
     connect_lora();
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_PROPRIETARY_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_PROPRIETARY_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -413,7 +413,7 @@ void lora_send_MAC_command_linkADRreq()
     // Send confirmed message to Conduit to initialize MAC command test and later open RX windows
     // (Conduit sends MAC commands during these RX windows)
     lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -441,7 +441,7 @@ void lora_send_MAC_command_linkADRreq()
     counter = 0;
 
     // Send confirmed message with MAC answer to Conduit
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -483,7 +483,7 @@ void lora_send_MAC_command_linkADRreq()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -513,7 +513,7 @@ void lora_send_MAC_command_linkcheckreq()
     }
 
     while (1) {
-        ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+        ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
         if (ret < 0) {
             TEST_ASSERT_MESSAGE(false, "Send failed");
             return;
@@ -566,7 +566,7 @@ void lora_send_MAC_command_dutycyclereq()
     // Send confirmed message to Conduit to initialize MAC command test and later open RX windows
     // (Conduit sends MAC commands during these RX windows)
     lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -594,7 +594,7 @@ void lora_send_MAC_command_dutycyclereq()
     counter = 0;
 
     // Send confirmed message with MAC answer to Conduit
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -636,7 +636,7 @@ void lora_send_MAC_command_dutycyclereq()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -662,7 +662,7 @@ void lora_send_MAC_command_RXparamsetupreq()
     // Send confirmed message to Conduit to initialize MAC command test and later open RX windows
     // (Conduit sends MAC commands during these RX windows)
     lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -690,7 +690,7 @@ void lora_send_MAC_command_RXparamsetupreq()
     counter = 0;
 
     // Send confirmed message with MAC answer to Conduit
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -732,7 +732,7 @@ void lora_send_MAC_command_RXparamsetupreq()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -758,7 +758,7 @@ void lora_send_MAC_command_devstatusreq()
     // Send confirmed message to Conduit to initialize MAC command test and later open RX windows
     // (Conduit sends MAC commands during these RX windows)
     lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -784,7 +784,7 @@ void lora_send_MAC_command_devstatusreq()
     counter = 0;
 
     // Send confirmed message with MAC answer to Conduit
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -826,7 +826,7 @@ void lora_send_MAC_command_devstatusreq()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -852,7 +852,7 @@ void lora_send_MAC_command_NewChannelReq()
     // Send confirmed message to Conduit to initialize MAC command test and later open RX windows
     // (Conduit sends MAC commands during these RX windows)
     lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -880,7 +880,7 @@ void lora_send_MAC_command_NewChannelReq()
     counter = 0;
 
     // Send confirmed message with MAC answer to Conduit
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -922,7 +922,7 @@ void lora_send_MAC_command_NewChannelReq()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -948,7 +948,7 @@ void lora_send_MAC_command_RXtimingsetupreq()
     // Send confirmed message to Conduit to initialize MAC command test and later open RX windows
     // (Conduit sends MAC commands during these RX windows)
     lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -974,7 +974,7 @@ void lora_send_MAC_command_RXtimingsetupreq()
     counter = 0;
 
     // Send confirmed message with MAC answer to Conduit
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -1015,7 +1015,7 @@ void lora_send_MAC_command_RXtimingsetupreq()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -1041,7 +1041,7 @@ void lora_send_MAC_command_DlChannelReq()
     // Send confirmed message to Conduit to initialize MAC command test and later open RX windows
     // (Conduit sends MAC commands during these RX windows)
     lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -1067,7 +1067,7 @@ void lora_send_MAC_command_DlChannelReq()
     counter = 0;
 
     // Send confirmed message with MAC answer to Conduit
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -1108,7 +1108,7 @@ void lora_send_MAC_command_DlChannelReq()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -1140,7 +1140,7 @@ void lora_connect_with_params_otaa_wrong()
     params.connection_u.otaa.dev_eui = my_dev_eui;
     params.connection_u.otaa.app_eui = my_app_eui;
     params.connection_u.otaa.app_key = my_app_key;
-    params.connection_u.otaa.nb_trials = LORAWAN_NB_TRIALS;
+    params.connection_u.otaa.nb_trials = MBED_CONF_LORA_NB_TRIALS;
 
     ret = lorawan.connect(params);
     TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "MAC status incorrect");
@@ -1179,7 +1179,7 @@ void lora_adr_enable_disable()
     ret = lorawan.enable_adaptive_datarate();
     TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "MAC status incorrect");
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -1220,7 +1220,7 @@ void lora_adr_enable_disable()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -1234,7 +1234,7 @@ void lora_adr_enable_disable()
     ret = lorawan.disable_adaptive_datarate();
     TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "MAC status incorrect");
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -1275,7 +1275,7 @@ void lora_adr_enable_disable()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
@@ -1298,7 +1298,7 @@ void test_data_rate(uint8_t tx_data[11], char *expected_recv_msg)
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
@@ -1340,7 +1340,7 @@ void test_data_rate(uint8_t tx_data[11], char *expected_recv_msg)
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
 
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");

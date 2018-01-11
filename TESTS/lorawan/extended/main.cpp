@@ -91,9 +91,9 @@ void lora_connect_with_params_otaa_ok()
     // we can't give it any arbitrary parameters. The Network server running
     // on conduit has been passed a certain set of randomly generated keys, and
     // those keys are written to mbed_app.json, so let's use them
-    uint8_t my_dev_eui[] = LORAWAN_DEVICE_EUI;
-    uint8_t my_app_eui[] = LORAWAN_APPLICATION_EUI;
-    uint8_t my_app_key[] = LORAWAN_APPLICATION_KEY;
+    uint8_t my_dev_eui[] = MBED_CONF_LORA_DEVICE_EUI;
+    uint8_t my_app_eui[] = MBED_CONF_LORA_APPLICATION_EUI;
+    uint8_t my_app_key[] = MBED_CONF_LORA_APPLICATION_KEY;
 
     params.connect_type = LORAWAN_CONNECTION_OTAA;
     params.connection_u.otaa.dev_eui = my_dev_eui;
@@ -137,14 +137,14 @@ void lora_connect_with_params_abp_ok()
     // we can't give it any arbitrary parameters. The Network server running
     // on conduit has been passed a certain set of randomly generated keys, and
     // those keys are written to mbed_app.json, so let's use them
-    uint8_t my_app_nwk_skey[] = LORAWAN_NWKSKEY;
-    uint8_t my_app_skey[] = LORAWAN_APPSKEY;
+    uint8_t my_app_nwk_skey[] = MBED_CONF_LORA_NWKSKEY;
+    uint8_t my_app_skey[] = MBED_CONF_LORA_APPSKEY;
 
     //Allow upcoming events
     lora_helper.event_lock = false;
 
     params.connect_type = LORAWAN_CONNECTION_ABP;
-    params.connection_u.abp.dev_addr = LORAWAN_DEVICE_ADDRESS;
+    params.connection_u.abp.dev_addr = MBED_CONF_LORA_DEVICE_ADDRESS;
     params.connection_u.abp.nwk_skey = my_app_nwk_skey;
     params.connection_u.abp.app_skey = my_app_skey;
 
@@ -257,7 +257,7 @@ void lora_tx_send_incorrect_type()
     }
 
     //ret = lorawan.send(session, message);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), type_incorrect);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), type_incorrect);
     TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_PARAMETER_INVALID, "Incorrect return value, expected LORA_MAC_STATUS_PARAMETER_INVALID");
 
     ret = lorawan.disconnect();
@@ -296,10 +296,10 @@ void lora_tx_send_fill_buffer()
         counter++;
     }
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     TEST_ASSERT_MESSAGE(ret == sizeof(tx_data), "Incorrect return value");
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     TEST_ASSERT_MESSAGE(LORA_MAC_STATUS_WOULD_BLOCK, "Incorrect return value, expected LORA_MAC_STATUS_OK");
 
     ret = lorawan.disconnect();
@@ -319,7 +319,7 @@ void lora_tx_send_without_connect()
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_NO_ACTIVE_SESSIONS, "Incorrect return value");
 
     //Prevent upcoming events between tests
@@ -1031,7 +1031,7 @@ void lora_channel_plan_extended()
     memset(&channels, 0, sizeof(channels));
 
     lorawan.set_confirmed_msg_retries(5);
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
 
 
     if (ret != sizeof(tx_data)) {
@@ -1104,7 +1104,7 @@ void lora_channel_plan_extended()
         counter++;
     }
 
-    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
+    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_CONFIRMED_FLAG);
     if (ret < 0) {
         TEST_ASSERT_MESSAGE(false, "Receive failed");
         return;
