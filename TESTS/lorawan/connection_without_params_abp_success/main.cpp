@@ -61,7 +61,7 @@ void connection_without_params_abp_success()
     counter = 0;
 
     //send unconfirmed message to conduit, open receive window
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -87,11 +87,11 @@ void connection_without_params_abp_success()
     while (1) {
         // Wait for RX_DONE event
         if (lora_helper.find_event(RX_DONE)) {
-            ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_UNCONFIRMED_FLAG);
+            ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_UNCONFIRMED_FLAG);
             break;
         } else if (counter >= 60) {
             // No messages received, let's send a new message to server and wait response again.
-            ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
+            ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
             if (ret != sizeof(tx_data)) {
                 TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
                 return;
@@ -103,7 +103,7 @@ void connection_without_params_abp_success()
                 // Wait for RX_DONE event
                 if (lora_helper.find_event(RX_DONE)) {
                     //Lets receive..
-                    ret = lorawan.receive(LORAWAN_APP_PORT, rx_data, 64, MSG_UNCONFIRMED_FLAG);
+                    ret = lorawan.receive(MBED_CONF_LORA_APP_PORT, rx_data, 64, MSG_UNCONFIRMED_FLAG);
                     if (ret < 0) {
                         TEST_ASSERT_MESSAGE(false, "Receive failed");
                         return;

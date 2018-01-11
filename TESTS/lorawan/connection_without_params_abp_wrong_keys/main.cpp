@@ -60,7 +60,7 @@ void connection_without_params_abp_wrong_keys()
     counter = 0;
 
     //send unconfirmed message to conduit, open receive window
-    ret = lorawan.send(LORAWAN_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
