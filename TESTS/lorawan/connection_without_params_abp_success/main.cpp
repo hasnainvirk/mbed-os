@@ -34,13 +34,13 @@ void connection_without_params_abp_success()
     uint8_t tx_data[] = "test_unconfirmed_message";
 
     ret = lorawan.initialize(&ev_queue);
-    if (ret != LORA_MAC_STATUS_OK) {
+    if (ret != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "Initialization failed");
         return;
     }
 
     ret = lorawan.connect();
-    if (ret != LORA_MAC_STATUS_OK && ret != LORA_MAC_STATUS_CONNECT_IN_PROGRESS) {
+    if (ret != LORAWAN_STATUS_OK && ret != LORAWAN_STATUS_CONNECT_IN_PROGRESS) {
         TEST_ASSERT_MESSAGE(false, "Connect failed");
         return;
     }
@@ -140,7 +140,7 @@ utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
     return greentea_test_setup_handler(number_of_cases);
 }
 
-void lora_event_handler(lora_events_t events)
+void lora_event_handler(lorawan_events_t events)
 {
     if (lora_helper.event_lock) {
         return;
