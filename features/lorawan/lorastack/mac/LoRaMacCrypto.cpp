@@ -298,7 +298,7 @@ int LoRaMacComputeMic( const uint8_t *, uint16_t , const uint8_t *, uint32_t,
     MBED_ASSERT("[LoRaCrypto] Must enable AES, CMAC & CIPHER from mbedTLS");
 
     // Never actually reaches here
-    return LORA_MAC_STATUS_CRYPTO_FAIL;
+    return LORAWAN_STATUS_CRYPTO_FAIL;
 }
 
 int LoRaMacPayloadEncrypt( const uint8_t *, uint16_t , const uint8_t *, uint32_t,
@@ -307,7 +307,7 @@ int LoRaMacPayloadEncrypt( const uint8_t *, uint16_t , const uint8_t *, uint32_t
     MBED_ASSERT("[LoRaCrypto] Must enable AES, CMAC & CIPHER from mbedTLS");
 
     // Never actually reaches here
-    return LORA_MAC_STATUS_CRYPTO_FAIL;
+    return LORAWAN_STATUS_CRYPTO_FAIL;
 }
 
 int LoRaMacPayloadDecrypt( const uint8_t *, uint16_t , const uint8_t *, uint32_t,
@@ -316,14 +316,14 @@ int LoRaMacPayloadDecrypt( const uint8_t *, uint16_t , const uint8_t *, uint32_t
     MBED_ASSERT("[LoRaCrypto] Must enable AES, CMAC & CIPHER from mbedTLS");
 
     // Never actually reaches here
-    return LORA_MAC_STATUS_CRYPTO_FAIL;
+    return LORAWAN_STATUS_CRYPTO_FAIL;
 }
 int LoRaMacJoinComputeMic( const uint8_t *, uint16_t , const uint8_t *, uint32_t * )
 {
     MBED_ASSERT("[LoRaCrypto] Must enable AES, CMAC & CIPHER from mbedTLS");
 
     // Never actually reaches here
-    return LORA_MAC_STATUS_CRYPTO_FAIL;
+    return LORAWAN_STATUS_CRYPTO_FAIL;
 }
 
 int LoRaMacJoinDecrypt( const uint8_t *, uint16_t , const uint8_t *, uint8_t * )
@@ -331,7 +331,7 @@ int LoRaMacJoinDecrypt( const uint8_t *, uint16_t , const uint8_t *, uint8_t * )
     MBED_ASSERT("[LoRaCrypto] Must enable AES, CMAC & CIPHER from mbedTLS");
 
     // Never actually reaches here
-    return LORA_MAC_STATUS_CRYPTO_FAIL;
+    return LORAWAN_STATUS_CRYPTO_FAIL;
 }
 
 int LoRaMacJoinComputeSKeys( const uint8_t *, const uint8_t *, uint16_t , uint8_t *, uint8_t * )
@@ -339,7 +339,7 @@ int LoRaMacJoinComputeSKeys( const uint8_t *, const uint8_t *, uint16_t , uint8_
     MBED_ASSERT("[LoRaCrypto] Must enable AES, CMAC & CIPHER from mbedTLS");
 
     // Never actually reaches here
-    return LORA_MAC_STATUS_CRYPTO_FAIL;
+    return LORAWAN_STATUS_CRYPTO_FAIL;
 }
 
 #endif
