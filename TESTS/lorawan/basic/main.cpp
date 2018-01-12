@@ -42,7 +42,7 @@ bool connect_lora()
     link_check_response = false;
 
     ret = lorawan.connect();
-    if (ret != LORA_MAC_STATUS_OK && ret != LORA_MAC_STATUS_CONNECT_IN_PROGRESS) {
+    if (ret != LORAWAN_STATUS_OK && ret != LORAWAN_STATUS_CONNECT_IN_PROGRESS) {
         TEST_ASSERT_MESSAGE(false, "Connect failed");
         return false;
     }
@@ -67,7 +67,7 @@ bool connect_lora()
 bool disconnect_lora()
 {
     int16_t ret = lorawan.disconnect();
-    if (ret != LORA_MAC_STATUS_OK) {
+    if (ret != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "Disconnect failed");
         return false;
     }
@@ -507,7 +507,7 @@ void lora_send_MAC_command_linkcheckreq()
 
     // set a link check request command
     ret = lorawan.add_link_check_request();
-    if (ret != LORA_MAC_STATUS_OK) {
+    if (ret != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "Adding link check req failed!");
         return;
     }
@@ -1124,7 +1124,7 @@ void lora_send_MAC_command_DlChannelReq()
 
 void lora_connect_with_params_otaa_wrong()
 {
-    lora_mac_status_t ret;
+    lorawan_status_t ret;
     lorawan_connect_t params;
     uint8_t counter = 0;
 
@@ -1143,7 +1143,7 @@ void lora_connect_with_params_otaa_wrong()
     params.connection_u.otaa.nb_trials = MBED_CONF_LORA_NB_TRIALS;
 
     ret = lorawan.connect(params);
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "MAC status incorrect");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "MAC status incorrect");
 
     // Wait for CONNECTED event
     while (1) {
@@ -1177,7 +1177,7 @@ void lora_adr_enable_disable()
     connect_lora();
 
     ret = lorawan.enable_adaptive_datarate();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "MAC status incorrect");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "MAC status incorrect");
 
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
@@ -1232,7 +1232,7 @@ void lora_adr_enable_disable()
     }
 
     ret = lorawan.disable_adaptive_datarate();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "MAC status incorrect");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "MAC status incorrect");
 
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
     if (ret != sizeof(tx_data)) {
@@ -1368,16 +1368,16 @@ void lora_set_data_rate()
 
     // ADR must be disabled to set the datarate
     ret = lorawan.disable_adaptive_datarate();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Incorrect MAC status");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Incorrect MAC status");
 
     connect_lora();
 
     // Set data rate to 1 -> Expected SF11BW125
     data_rate = 1;
     ret = lorawan.set_datarate(data_rate);
-    if(ret == LORA_MAC_STATUS_PARAMETER_INVALID) {
+    if(ret == LORAWAN_STATUS_PARAMETER_INVALID) {
         TEST_ASSERT_MESSAGE(false, "Invalid parameter: ADR not disabled or invalid data rate");
-    } else if(ret != LORA_MAC_STATUS_OK) {
+    } else if(ret != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "Incorrect MAC status");
     }
 
@@ -1389,9 +1389,9 @@ void lora_set_data_rate()
     strcpy((char*)tx_data, "DR3");
 
     ret = lorawan.set_datarate(data_rate);
-    if(ret == LORA_MAC_STATUS_PARAMETER_INVALID) {
+    if(ret == LORAWAN_STATUS_PARAMETER_INVALID) {
         TEST_ASSERT_MESSAGE(false, "Invalid parameter: ADR not disabled or invalid data rate");
-    } else if(ret != LORA_MAC_STATUS_OK) {
+    } else if(ret != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "Incorrect MAC status");
     }
 
@@ -1402,9 +1402,9 @@ void lora_set_data_rate()
     data_rate = 5;
     strcpy((char*)tx_data, "DR5");
     ret = lorawan.set_datarate(data_rate);
-    if(ret == LORA_MAC_STATUS_PARAMETER_INVALID) {
+    if(ret == LORAWAN_STATUS_PARAMETER_INVALID) {
         TEST_ASSERT_MESSAGE(false, "Invalid parameter: ADR not disabled or invalid data rate");
-    } else if(ret != LORA_MAC_STATUS_OK) {
+    } else if(ret != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "Incorrect MAC status");
     }
 
@@ -1441,7 +1441,7 @@ utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
     return greentea_test_setup_handler(number_of_cases);
 }
 
-static void lora_event_handler(lora_events_t events)
+static void lora_event_handler(lorawan_events_t events)
 {
     if (lora_helper.event_lock) {
         return;
@@ -1463,7 +1463,7 @@ int main() {
     lorawan.add_app_callbacks(&callbacks);
 
     int16_t ret = lorawan.initialize(&ev_queue);
-    if (ret != LORA_MAC_STATUS_OK) {
+    if (ret != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "Initialization failed");
         return ret;
     }
