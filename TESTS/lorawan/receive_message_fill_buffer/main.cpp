@@ -85,7 +85,7 @@ static Thread t(osPriorityNormal, TEST_DISPATCH_THREAD_SIZE);
                            NC, LORA_ANT_BOOST, LORA_TCXO);
 #endif
 
-void lora_event_handler(lora_events_t events);
+void lora_event_handler(lorawan_events_t events);
 
 class LoRaTestHelper
 {
@@ -131,7 +131,7 @@ void lora_receive_fill_buffer()
     // Connect to conduit
     ret = lorawan.connect();
 
-    if (ret != LORA_MAC_STATUS_OK && ret != LORA_MAC_STATUS_CONNECT_IN_PROGRESS) {
+    if (ret != LORAWAN_STATUS_OK && ret != LORAWAN_STATUS_CONNECT_IN_PROGRESS) {
         TEST_ASSERT_MESSAGE(false, "Connect failed");
         return;
     }
@@ -245,7 +245,7 @@ int main() {
     Harness::run(specification);
 }
 
-void lora_event_handler(lora_events_t events)
+void lora_event_handler(lorawan_events_t events)
 {
     if (lora_helper.event_lock) {
         return;
