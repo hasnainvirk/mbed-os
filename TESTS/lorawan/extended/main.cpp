@@ -27,14 +27,14 @@ static LoRaTestHelper lora_helper;
 
 void lora_connect()
 {
-    lora_mac_status_t ret;
+    lorawan_status_t ret;
     uint8_t counter = 0;
 
     //Allow upcoming events
     lora_helper.event_lock = false;
 
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -52,7 +52,7 @@ void lora_connect()
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -62,7 +62,7 @@ void lora_connect()
 
 void lora_connect_with_params_wrong_type()
 {
-    lora_mac_status_t ret;
+    lorawan_status_t ret;
     lorawan_connect_t params;
 
     //Allow upcoming events
@@ -70,7 +70,7 @@ void lora_connect_with_params_wrong_type()
 
     params.connect_type = (lorawan_connect_type_t)100;
     ret = lorawan.connect(params);
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_PARAMETER_INVALID, "Incorrect return value, expected LORA_MAC_STATUS_PARAMETER_INVALID");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_PARAMETER_INVALID, "Incorrect return value, expected LORAWAN_STATUS_PARAMETER_INVALID");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -80,7 +80,7 @@ void lora_connect_with_params_wrong_type()
 
 void lora_connect_with_params_otaa_ok()
 {
-    lora_mac_status_t ret;
+    lorawan_status_t ret;
     lorawan_connect_t params;
     uint8_t counter = 0;
 
@@ -101,7 +101,7 @@ void lora_connect_with_params_otaa_ok()
     params.connection_u.otaa.app_key = my_app_key;
 
     ret = lorawan.connect(params);
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -119,7 +119,7 @@ void lora_connect_with_params_otaa_ok()
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -129,7 +129,7 @@ void lora_connect_with_params_otaa_ok()
 
 void lora_connect_with_params_abp_ok()
 {
-    lora_mac_status_t ret;
+    lorawan_status_t ret;
     lorawan_connect_t params;
     uint8_t counter = 0;
 
@@ -149,7 +149,7 @@ void lora_connect_with_params_abp_ok()
     params.connection_u.abp.app_skey = my_app_skey;
 
     ret = lorawan.connect(params);
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -167,7 +167,7 @@ void lora_connect_with_params_abp_ok()
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -177,14 +177,14 @@ void lora_connect_with_params_abp_ok()
 
 void lora_disconnected()
 {
-    lora_mac_status_t ret;
+    lorawan_status_t ret;
     uint8_t counter = 0;
 
     //Allow upcoming events
     lora_helper.event_lock = false;
 
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -205,7 +205,7 @@ void lora_disconnected()
     wait_ms(2000);
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     // Wait for DISCONNECTED event
     while (1) {
@@ -239,7 +239,7 @@ void lora_tx_send_incorrect_type()
     lora_helper.event_lock = false;
 
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -258,10 +258,10 @@ void lora_tx_send_incorrect_type()
 
     //ret = lorawan.send(session, message);
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), type_incorrect);
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_PARAMETER_INVALID, "Incorrect return value, expected LORA_MAC_STATUS_PARAMETER_INVALID");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_PARAMETER_INVALID, "Incorrect return value, expected LORAWAN_STATUS_PARAMETER_INVALID");
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -279,7 +279,7 @@ void lora_tx_send_fill_buffer()
     lora_helper.event_lock = false;
 
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -300,10 +300,10 @@ void lora_tx_send_fill_buffer()
     TEST_ASSERT_MESSAGE(ret == sizeof(tx_data), "Incorrect return value");
 
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
-    TEST_ASSERT_MESSAGE(LORA_MAC_STATUS_WOULD_BLOCK, "Incorrect return value, expected LORA_MAC_STATUS_OK");
+    TEST_ASSERT_MESSAGE(LORAWAN_STATUS_WOULD_BLOCK, "Incorrect return value, expected LORAWAN_STATUS_OK");
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -320,7 +320,7 @@ void lora_tx_send_without_connect()
     lora_helper.event_lock = false;
 
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_NO_ACTIVE_SESSIONS, "Incorrect return value");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_NO_ACTIVE_SESSIONS, "Incorrect return value");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -338,13 +338,13 @@ void lora_get_channel_plan_test()
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    lora_channels_t channels[16];
-    lora_channelplan_t plan;
+    loramac_channel_t channels[16];
+    lorawan_channelplan_t plan;
     plan.channels = channels;
     int16_t ret;
     uint8_t counter = 0;
 
-    lora_channels_t expected[16] = {
+    loramac_channel_t expected[16] = {
          { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
          { 1, 868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
          { 2, 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -352,7 +352,7 @@ void lora_get_channel_plan_test()
 
     // get_channel_plan requires join to be done before calling it
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -377,7 +377,7 @@ void lora_get_channel_plan_test()
     }
 
     // Get plan from stack
-    if (lorawan.get_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.get_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "get_channel_plan failed");
         return;
     }
@@ -390,17 +390,17 @@ void lora_get_channel_plan_test()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.frequency == expected[i].ch_param.frequency, "Frequency mismatch");
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.rx1_frequency == expected[i].ch_param.rx1_frequency, "Rx1 frequency mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.min == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.min, "Dr range min mismatch");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.min ==
+                expected[i].ch_param.dr_range.fields.min, "Dr range min mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.max == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.max, "Dr range max mismath");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.max ==
+                expected[i].ch_param.dr_range.fields.max, "Dr range max mismath");
 
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -419,14 +419,14 @@ void lora_remove_channel_test()
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    lora_channels_t channels[16];
-    lora_channelplan_t plan;
+    loramac_channel_t channels[16];
+    lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 3;
     int16_t ret;
     uint8_t counter = 0;
 
-    lora_channels_t expected[16] = {
+    loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
         { 1, 868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
         { 2, 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -454,7 +454,7 @@ void lora_remove_channel_test()
 
     // get_channel_plan requires join to be done before calling it
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -479,7 +479,7 @@ void lora_remove_channel_test()
     }
 
     // Set plan to stack
-    if (lorawan.set_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.set_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "set_channel_plan failed");
         return;
     }
@@ -493,7 +493,7 @@ void lora_remove_channel_test()
         return;
     }
 
-    if (lorawan.get_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.get_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "get_channel_plan failed");
         return;
     }
@@ -506,17 +506,17 @@ void lora_remove_channel_test()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.frequency == expected[i].ch_param.frequency, "Frequency mismatch");
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.rx1_frequency == expected[i].ch_param.rx1_frequency, "Rx1 frequency mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.min == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.min, "Dr range min mismatch");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.min ==
+                expected[i].ch_param.dr_range.fields.min, "Dr range min mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.max == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.max, "Dr range max mismath");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.max ==
+                expected[i].ch_param.dr_range.fields.max, "Dr range max mismath");
 
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -533,14 +533,14 @@ void lora_remove_channel_plan()
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    lora_channels_t channels[16];
-    lora_channelplan_t plan;
+    loramac_channel_t channels[16];
+    lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 3;
     int16_t ret;
     uint8_t counter = 0;
 
-    lora_channels_t expected[16] = {
+    loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
         { 1, 868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
         { 2, 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -566,7 +566,7 @@ void lora_remove_channel_plan()
 
     // get_channel_plan requires join to be done before calling it
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -591,7 +591,7 @@ void lora_remove_channel_plan()
     }
 
     // Set plan to stack
-    if (lorawan.set_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.set_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "set_channel_plan failed");
         return;
     }
@@ -605,7 +605,7 @@ void lora_remove_channel_plan()
     plan.nb_channels = 0;
     memset(&channels, 0, sizeof(channels));
 
-    if (lorawan.get_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.get_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "get_channel_plan failed");
         return;
     }
@@ -618,17 +618,17 @@ void lora_remove_channel_plan()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.frequency == expected[i].ch_param.frequency, "Frequency mismatch");
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.rx1_frequency == expected[i].ch_param.rx1_frequency, "Rx1 frequency mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.min == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.min, "Dr range min mismatch");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.min ==
+                expected[i].ch_param.dr_range.fields.min, "Dr range min mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.max == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.max, "Dr range max mismath");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.max ==
+                expected[i].ch_param.dr_range.fields.max, "Dr range max mismath");
 
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -647,14 +647,14 @@ void lora_set_all_channel_plan_test()
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    lora_channels_t channels[16];
-    lora_channelplan_t plan;
+    loramac_channel_t channels[16];
+    lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 13;
     int16_t ret;
     uint8_t counter = 0;
 
-    lora_channels_t expected[16] = {
+    loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },      //EU868_LC1,
         { 1, 868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },      //EU868_LC2
         { 2, 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },      //EU868_LC3
@@ -677,96 +677,96 @@ void lora_set_all_channel_plan_test()
     plan.channels[0].ch_param.frequency = 867100000;
     plan.channels[0].ch_param.rx1_frequency = 0;
     plan.channels[0].ch_param.band = 0;
-    plan.channels[0].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[0].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[0].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[0].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[1].id = 4;
     plan.channels[1].ch_param.frequency = 867300000;
     plan.channels[1].ch_param.rx1_frequency = 0;
     plan.channels[1].ch_param.band = 0;
-    plan.channels[1].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[1].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[1].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[1].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[2].id = 5;
     plan.channels[2].ch_param.frequency = 867500000;
     plan.channels[2].ch_param.rx1_frequency = 0;
     plan.channels[2].ch_param.band = 0;
-    plan.channels[2].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[2].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[2].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[2].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[3].id = 6;
     plan.channels[3].ch_param.frequency = 867700000;
     plan.channels[3].ch_param.rx1_frequency = 0;
     plan.channels[3].ch_param.band = 0;
-    plan.channels[3].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[3].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[3].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[3].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[4].id = 7;
     plan.channels[4].ch_param.frequency = 867900000;
     plan.channels[4].ch_param.rx1_frequency = 0;
     plan.channels[4].ch_param.band = 0;
-    plan.channels[4].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[4].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[4].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[4].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[5].id = 8;
     plan.channels[5].ch_param.frequency = 868800000;
     plan.channels[5].ch_param.rx1_frequency = 0;
     plan.channels[5].ch_param.band = 2;
-    plan.channels[5].ch_param.dr_range.lora_mac_fields_s.max = DR_7;
-    plan.channels[5].ch_param.dr_range.lora_mac_fields_s.min = DR_7;
+    plan.channels[5].ch_param.dr_range.fields.max = DR_7;
+    plan.channels[5].ch_param.dr_range.fields.min = DR_7;
 
     plan.channels[6].id = 9;
     plan.channels[6].ch_param.frequency = 868300000;
     plan.channels[6].ch_param.rx1_frequency = 0;
     plan.channels[6].ch_param.band = 1;
-    plan.channels[6].ch_param.dr_range.lora_mac_fields_s.max = DR_6;
-    plan.channels[6].ch_param.dr_range.lora_mac_fields_s.min = DR_6;
+    plan.channels[6].ch_param.dr_range.fields.max = DR_6;
+    plan.channels[6].ch_param.dr_range.fields.min = DR_6;
 
     plan.channels[7].id = 10;
     plan.channels[7].ch_param.frequency = 868200000;
     plan.channels[7].ch_param.rx1_frequency = 0;
     plan.channels[7].ch_param.band = 1;
-    plan.channels[7].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[7].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[7].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[7].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[8].id = 11;
     plan.channels[8].ch_param.frequency = 869700000;
     plan.channels[8].ch_param.rx1_frequency = 0;
     plan.channels[8].ch_param.band = 4;
-    plan.channels[8].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[8].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[8].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[8].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[9].id = 12;
     plan.channels[9].ch_param.frequency = 869400000;
     plan.channels[9].ch_param.rx1_frequency = 0;
     plan.channels[9].ch_param.band = 3;
-    plan.channels[9].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[9].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[9].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[9].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[10].id = 13;
     plan.channels[10].ch_param.frequency = 868700000;
     plan.channels[10].ch_param.rx1_frequency = 0;
     plan.channels[10].ch_param.band = 2;
-    plan.channels[10].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[10].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[10].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[10].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[11].id = 14;
     plan.channels[11].ch_param.frequency = 869200000;
     plan.channels[11].ch_param.rx1_frequency = 0;
     plan.channels[11].ch_param.band = 2;
-    plan.channels[11].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[11].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[11].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[11].ch_param.dr_range.fields.min = DR_0;
 
     plan.channels[12].id = 15;
     plan.channels[12].ch_param.frequency = 868600000;
     plan.channels[12].ch_param.rx1_frequency = 0;
     plan.channels[12].ch_param.band = 1;
-    plan.channels[12].ch_param.dr_range.lora_mac_fields_s.max = DR_5;
-    plan.channels[12].ch_param.dr_range.lora_mac_fields_s.min = DR_0;
+    plan.channels[12].ch_param.dr_range.fields.max = DR_5;
+    plan.channels[12].ch_param.dr_range.fields.min = DR_0;
 
     // get_channel_plan requires join to be done before calling it
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -791,7 +791,7 @@ void lora_set_all_channel_plan_test()
     }
 
     // Set plan to stack
-    if (lorawan.set_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.set_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "set_channel_plan failed");
         return;
     }
@@ -800,7 +800,7 @@ void lora_set_all_channel_plan_test()
     plan.nb_channels = 0;
     memset(&channels, 0, sizeof(channels));
 
-    if (lorawan.get_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.get_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "get_channel_plan failed");
         return;
     }
@@ -813,17 +813,17 @@ void lora_set_all_channel_plan_test()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.frequency == expected[i].ch_param.frequency, "Frequency mismatch");
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.rx1_frequency == expected[i].ch_param.rx1_frequency, "Rx1 frequency mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.min == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.min, "Dr range min mismatch");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.min ==
+                expected[i].ch_param.dr_range.fields.min, "Dr range min mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.max == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.max, "Dr range max mismath");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.max ==
+                expected[i].ch_param.dr_range.fields.max, "Dr range max mismath");
 
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -842,14 +842,14 @@ void lora_set_6_channel_plan_test()
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    lora_channels_t channels[16];
-    lora_channelplan_t plan;
+    loramac_channel_t channels[16];
+    lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 3;
     int16_t ret;
     uint8_t counter = 0;
 
-    lora_channels_t expected[16] = {
+    loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
         { 1, 868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
         { 2, 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -878,7 +878,7 @@ void lora_set_6_channel_plan_test()
 
     // get_channel_plan requires join to be done before calling it
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -903,7 +903,7 @@ void lora_set_6_channel_plan_test()
     }
 
     // Set plan to stack
-    if (lorawan.set_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.set_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "set_channel_plan failed");
         return;
     }
@@ -912,7 +912,7 @@ void lora_set_6_channel_plan_test()
     plan.nb_channels = 0;
     memset(&channels, 0, sizeof(channels));
 
-    if (lorawan.get_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.get_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "get_channel_plan failed");
         return;
     }
@@ -925,17 +925,17 @@ void lora_set_6_channel_plan_test()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.frequency == expected[i].ch_param.frequency, "Frequency mismatch");
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.rx1_frequency == expected[i].ch_param.rx1_frequency, "Rx1 frequency mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.min == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.min, "Dr range min mismatch");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.min ==
+                expected[i].ch_param.dr_range.fields.min, "Dr range min mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.max == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.max, "Dr range max mismath");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.max ==
+                expected[i].ch_param.dr_range.fields.max, "Dr range max mismath");
 
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -954,8 +954,8 @@ void lora_channel_plan_extended()
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    lora_channels_t channels[16];
-    lora_channelplan_t plan;
+    loramac_channel_t channels[16];
+    lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 3;
     int16_t ret;
@@ -963,7 +963,7 @@ void lora_channel_plan_extended()
     uint8_t rx_data[64] = { 0 };
     uint8_t tx_data[] = "test_confirmed_message";
 
-    lora_channels_t expected[16] = {
+    loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
         { 1, 868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
         { 2, 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -974,7 +974,7 @@ void lora_channel_plan_extended()
 
     // get_channel_plan requires join to be done before calling it
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK || ret == LORA_MAC_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
 
     // Wait for CONNECTED event
     while (1) {
@@ -1021,7 +1021,7 @@ void lora_channel_plan_extended()
     plan.channels[2].ch_param.rx1_frequency = 0;
 
     // Set plan to stack
-    if (lorawan.set_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.set_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "set_channel_plan failed");
         return;
     }
@@ -1115,7 +1115,7 @@ void lora_channel_plan_extended()
         return;
     }
 
-    if (lorawan.get_channel_plan(plan) != LORA_MAC_STATUS_OK) {
+    if (lorawan.get_channel_plan(plan) != LORAWAN_STATUS_OK) {
         TEST_ASSERT_MESSAGE(false, "get_channel_plan failed");
         return;
     }
@@ -1128,17 +1128,17 @@ void lora_channel_plan_extended()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.frequency == expected[i].ch_param.frequency, "Frequency mismatch");
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.rx1_frequency == expected[i].ch_param.rx1_frequency, "Rx1 frequency mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.min == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.min, "Dr range min mismatch");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.min ==
+                expected[i].ch_param.dr_range.fields.min, "Dr range min mismatch");
 
-        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.lora_mac_fields_s.max == 
-                expected[i].ch_param.dr_range.lora_mac_fields_s.max, "Dr range max mismath");
+        TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.dr_range.fields.max ==
+                expected[i].ch_param.dr_range.fields.max, "Dr range max mismath");
 
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
     ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Disconnect failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
 
     //Prevent upcoming events between tests
     lora_helper.event_lock = true;
@@ -1177,7 +1177,7 @@ utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
 // Do not print in this function.
 // As we are using a thread to dispatch events, this is being called
 // from dispatch thread context
-static void lora_event_handler(lora_events_t events)
+static void lora_event_handler(lorawan_events_t events)
 {
     if (lora_helper.event_lock) {
         return;
@@ -1192,14 +1192,14 @@ int main() {
     // start thread to handle events
     t.start(callback(&ev_queue, &EventQueue::dispatch_forever));
 
-    lora_mac_status_t ret;
+    lorawan_status_t ret;
 
     callbacks.events = mbed::callback(lora_event_handler);
 
     lorawan.add_app_callbacks(&callbacks);
 
     ret = lorawan.initialize(&ev_queue);
-    TEST_ASSERT_MESSAGE(ret == LORA_MAC_STATUS_OK, "Lora layer initialization failed");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Lora layer initialization failed");
 
     Specification specification(greentea_test_setup, cases, greentea_test_teardown_handler);
     Harness::run(specification);
