@@ -20,7 +20,7 @@
 #include "SX1272_LoRaRadio.h"
 #endif
 
-#if defined(TARGET_K64F) || defined(TARGET_DISCO_L072CZ_LRWAN1)
+#if defined(TARGET_K64F) || defined(TARGET_DISCO_L072CZ_LRWAN1) || defined (TARGET_WISE_1510)
 #include "SX1276_LoRaRadio.h"
 #endif
 #include "LoRaWANInterface.h"
@@ -84,3 +84,22 @@ static Thread t(osPriorityNormal, TEST_DISPATCH_THREAD_SIZE);
                            NC, NC, LORA_ANT_TX, LORA_ANT_RX,
                            NC, LORA_ANT_BOOST, LORA_TCXO);
 #endif
+
+#if TARGET_WISE_1510
+#define LORA_SPI_MOSI   PB_5
+#define LORA_SPI_MISO   PB_4
+#define LORA_SPI_SCK    PB_3
+#define LORA_CS         PA_15
+#define LORA_RESET      PC_14
+#define LORA_DIO0       PC_13
+#define LORA_DIO1       PB_8
+#define LORA_DIO2       PB_7
+#define LORA_DIO3       PD_2
+#define LORA_DIO4       PC_11
+#define LORA_DIO5       PC_10
+#define LORA_ANT_SWITCH PC_15
+
+static SX1276_LoRaRadio Radio(LORA_SPI_MOSI, LORA_SPI_MISO, LORA_SPI_SCK, LORA_CS, LORA_RESET,
+                              LORA_DIO0, LORA_DIO1, LORA_DIO2, LORA_DIO3, LORA_DIO4, LORA_DIO5,
+                              NC, NC, NC, NC, LORA_ANT_SWITCH, NC, NC);
+#endif //TARGET_WISE_1510
