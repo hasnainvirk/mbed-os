@@ -20,9 +20,10 @@
 #include "SX1272_LoRaRadio.h"
 #endif
 
-#if defined(TARGET_K64F) || defined(TARGET_DISCO_L072CZ_LRWAN1) || defined (TARGET_WISE_1510)
+#if defined(TARGET_K64F) || defined(TARGET_DISCO_L072CZ_LRWAN1) || defined(TARGET_CMWX1ZZABZ_078) || defined (TARGET_WISE_1510)
 #include "SX1276_LoRaRadio.h"
 #endif
+
 #include "LoRaWANInterface.h"
 #include "LoRaTestHelper.h"
 
@@ -62,7 +63,7 @@ static Thread t(osPriorityNormal, TEST_DISPATCH_THREAD_SIZE);
                            D9, NC, NC, NC, NC, A4, NC, NC);
 #endif
 
-#if defined(TARGET_DISCO_L072CZ_LRWAN1)
+#if defined(TARGET_DISCO_L072CZ_LRWAN1) || defined(TARGET_CMWX1ZZABZ_078)
     #define LORA_SPI_MOSI   PA_7
     #define LORA_SPI_MISO   PA_6
     #define LORA_SPI_SCLK   PB_3
