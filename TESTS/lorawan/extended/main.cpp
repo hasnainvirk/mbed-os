@@ -25,18 +25,21 @@ using namespace utest::v1;
 static LoRaWANInterface lorawan(Radio);
 static LoRaTestHelper lora_helper;
 
-void lora_connect()
+static const uint32_t TEST_WAIT = 500;
+
+bool connect_lora()
 {
-    lorawan_status_t ret;
+    int16_t ret = 0;
     uint8_t counter = 0;
 
-    //Allow upcoming events
-    lora_helper.event_lock = false;
+    lora_helper.clear_buffer();
 
     ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
+    if (ret != LORAWAN_STATUS_OK && ret != LORAWAN_STATUS_CONNECT_IN_PROGRESS) {
+        TEST_ASSERT_MESSAGE(false, "Connect failed");
+        return false;
+    }
 
-    // Wait for CONNECTED event
     while (1) {
         if (lora_helper.find_event(CONNECTED)) {
             break;
@@ -45,20 +48,30 @@ void lora_connect()
         // Fail on timeout
         if (counter >= 60) {
             TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
+            return false;
         }
-        wait_ms(1000);
-        counter++;
+        wait_ms(TEST_WAIT);
+        counter += 1;
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
+    return true;
 }
+
+bool disconnect_lora()
+{
+    int16_t ret = lorawan.disconnect();
+    if (ret != LORAWAN_STATUS_OK) {
+        TEST_ASSERT_MESSAGE(false, "Disconnect failed");
+        return false;
+    }
+    wait_ms(100); // Wait for disconnect event
+    if (!lora_helper.find_event(DISCONNECTED)) {
+        TEST_ASSERT_MESSAGE(false, "Disconnect timeout");
+    }
+    lora_helper.clear_buffer();
+    return true;
+}
+
 
 void lora_connect_with_params_wrong_type()
 {
@@ -72,10 +85,7 @@ void lora_connect_with_params_wrong_type()
     ret = lorawan.connect(params);
     TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_PARAMETER_INVALID, "Incorrect return value, expected LORAWAN_STATUS_PARAMETER_INVALID");
 
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
+    disconnect_lora();
 }
 
 void lora_connect_with_params_otaa_ok()
@@ -114,17 +124,11 @@ void lora_connect_with_params_otaa_ok()
             TEST_ASSERT_MESSAGE(false, "Connection timeout");
             return;
         }
-        wait_ms(1000);
+        wait_ms(TEST_WAIT);
         counter++;
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
+    disconnect_lora();
 }
 
 void lora_connect_with_params_abp_ok()
@@ -162,153 +166,48 @@ void lora_connect_with_params_abp_ok()
             TEST_ASSERT_MESSAGE(false, "Connection timeout");
             return;
         }
-        wait_ms(1000);
+        wait_ms(TEST_WAIT);
         counter++;
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
-}
-
-void lora_disconnected()
-{
-    lorawan_status_t ret;
-    uint8_t counter = 0;
-
-    //Allow upcoming events
-    lora_helper.event_lock = false;
-
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
-
-    counter = 0;
-    wait_ms(2000);
-
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    // Wait for DISCONNECTED event
-    while (1) {
-        if (lora_helper.find_event(DISCONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Disconnect timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
+    disconnect_lora();
 }
 
 void lora_tx_send_incorrect_type()
 {
     int16_t ret;
-    uint8_t counter = 0;
     uint8_t tx_data[11] = {"l"};
     int type_incorrect = 0x03; //No 0x03 type defined
 
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
+    connect_lora();
 
     //ret = lorawan.send(session, message);
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), type_incorrect);
     TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_PARAMETER_INVALID, "Incorrect return value, expected LORAWAN_STATUS_PARAMETER_INVALID");
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
+    disconnect_lora();
 }
 
 void lora_tx_send_fill_buffer()
 {
     int16_t ret;
-    uint8_t counter = 0;
     uint8_t tx_data[11] = {"l"};
 
     //Allow upcoming events
     lora_helper.event_lock = false;
 
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
+    connect_lora();
 
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     TEST_ASSERT_MESSAGE(ret == sizeof(tx_data), "Incorrect return value");
 
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
-    TEST_ASSERT_MESSAGE(LORAWAN_STATUS_WOULD_BLOCK, "Incorrect return value, expected LORAWAN_STATUS_OK");
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_WOULD_BLOCK, "Incorrect return value, expected LORAWAN_STATUS_OK");
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
+    disconnect_lora();
 }
 
 void lora_tx_send_without_connect()
@@ -322,10 +221,7 @@ void lora_tx_send_without_connect()
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_NO_ACTIVE_SESSIONS, "Incorrect return value");
 
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
+    disconnect_lora();
 }
 
 void lora_get_channel_plan_test()
@@ -341,8 +237,6 @@ void lora_get_channel_plan_test()
     loramac_channel_t channels[16];
     lorawan_channelplan_t plan;
     plan.channels = channels;
-    int16_t ret;
-    uint8_t counter = 0;
 
     loramac_channel_t expected[16] = {
          { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -350,24 +244,7 @@ void lora_get_channel_plan_test()
          { 2, 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
     };
 
-    // get_channel_plan requires join to be done before calling it
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
+    connect_lora();
 
     // Gateway may add channels with Join Accept in CFList slot (optional)
     // Remove those channels from the channel plan before adding own custom channels
@@ -399,14 +276,7 @@ void lora_get_channel_plan_test()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
-
+    disconnect_lora();
 }
 
 void lora_remove_channel_test()
@@ -423,8 +293,6 @@ void lora_remove_channel_test()
     lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 3;
-    int16_t ret;
-    uint8_t counter = 0;
 
     loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -453,23 +321,7 @@ void lora_remove_channel_test()
     plan.channels[2].ch_param.rx1_frequency = 0;
 
     // get_channel_plan requires join to be done before calling it
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
+    connect_lora();
 
     // Gateway may add channels with Join Accept in CFList slot (optional)
     // Remove those channels from the channel plan before adding own custom channels
@@ -515,13 +367,7 @@ void lora_remove_channel_test()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
+    disconnect_lora();
 }
 
 void lora_remove_channel_plan() 
@@ -537,8 +383,6 @@ void lora_remove_channel_plan()
     lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 3;
-    int16_t ret;
-    uint8_t counter = 0;
 
     loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -565,23 +409,7 @@ void lora_remove_channel_plan()
     plan.channels[2].ch_param.rx1_frequency = 0;
 
     // get_channel_plan requires join to be done before calling it
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
+    connect_lora();
 
     // Gateway may add channels with Join Accept in CFList slot (optional)
     // Remove those channels from the channel plan before adding own custom channels
@@ -627,14 +455,7 @@ void lora_remove_channel_plan()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
-
+    disconnect_lora();
 }
 
 void lora_set_all_channel_plan_test()
@@ -651,8 +472,6 @@ void lora_set_all_channel_plan_test()
     lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 13;
-    int16_t ret;
-    uint8_t counter = 0;
 
     loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },      //EU868_LC1,
@@ -765,23 +584,7 @@ void lora_set_all_channel_plan_test()
     plan.channels[12].ch_param.dr_range.fields.min = DR_0;
 
     // get_channel_plan requires join to be done before calling it
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
+    connect_lora();
 
     // Gateway may add channels with Join Accept in CFList slot (optional)
     // Remove those channels from the channel plan before adding own custom channels
@@ -822,14 +625,7 @@ void lora_set_all_channel_plan_test()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
-
+    disconnect_lora();
 }
 
 void lora_set_6_channel_plan_test()
@@ -846,8 +642,6 @@ void lora_set_6_channel_plan_test()
     lorawan_channelplan_t plan;
     plan.channels = channels;
     plan.nb_channels = 3;
-    int16_t ret;
-    uint8_t counter = 0;
 
     loramac_channel_t expected[16] = {
         { 0, 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 },
@@ -877,23 +671,7 @@ void lora_set_6_channel_plan_test()
     plan.channels[2].ch_param.rx1_frequency = 0;
 
     // get_channel_plan requires join to be done before calling it
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
+    connect_lora();
 
     // Gateway may add channels with Join Accept in CFList slot (optional)
     // Remove those channels from the channel plan before adding own custom channels
@@ -934,14 +712,7 @@ void lora_set_6_channel_plan_test()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
-
+    disconnect_lora();
 }
 
 void lora_channel_plan_extended()
@@ -973,23 +744,7 @@ void lora_channel_plan_extended()
     };
 
     // get_channel_plan requires join to be done before calling it
-    ret = lorawan.connect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK || ret == LORAWAN_STATUS_CONNECT_IN_PROGRESS, "Connect failed");
-
-    // Wait for CONNECTED event
-    while (1) {
-        if (lora_helper.find_event(CONNECTED)) {
-            break;
-        }
-
-        // Fail on timeout
-        if (counter >= 60) {
-            TEST_ASSERT_MESSAGE(false, "Connection timeout");
-            return;
-        }
-        wait_ms(1000);
-        counter++;
-    }
+    connect_lora();
 
     // Perform packet send and receive, then verify that mote still sticks to current plan
     // Reset timeout counter
@@ -1031,9 +786,8 @@ void lora_channel_plan_extended()
     memset(&channels, 0, sizeof(channels));
 
     lorawan.set_confirmed_msg_retries(5);
+
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_CONFIRMED_FLAG);
-
-
     if (ret != sizeof(tx_data)) {
         TEST_ASSERT_MESSAGE(false, "TX-message buffering failed");
         return;
@@ -1069,7 +823,7 @@ void lora_channel_plan_extended()
             return;
         }
 
-        wait_ms(1000);
+        wait_ms(TEST_WAIT);
         counter++;
     }
 
@@ -1100,7 +854,7 @@ void lora_channel_plan_extended()
             return;
         }
 
-        wait_ms(1000);
+        wait_ms(TEST_WAIT);
         counter++;
     }
 
@@ -1137,14 +891,7 @@ void lora_channel_plan_extended()
         TEST_ASSERT_MESSAGE(plan.channels[i].ch_param.band == expected[i].ch_param.band, "Band mismatch");
     }
 
-    ret = lorawan.disconnect();
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Disconnect failed");
-
-    //Prevent upcoming events between tests
-    lora_helper.event_lock = true;
-    //Clear the event buffer
-    memset(lora_helper.event_buffer, 0xFF, sizeof(lora_helper.event_buffer));
-
+    disconnect_lora();
 }
 
 utest::v1::status_t greentea_failure_handler(const Case *const source, const failure_t reason) {
@@ -1153,11 +900,9 @@ utest::v1::status_t greentea_failure_handler(const Case *const source, const fai
 }
 
 Case cases[] = {
-    Case("Connect without parameters test", lora_connect, greentea_failure_handler),
     Case("Connect with parameters wrong type", lora_connect_with_params_wrong_type, greentea_failure_handler),
     Case("Connect with parameters OTAA ok", lora_connect_with_params_otaa_ok, greentea_failure_handler),
     Case("Connect with parameters ABP ok", lora_connect_with_params_abp_ok, greentea_failure_handler),
-    Case("Disconnect", lora_disconnected, greentea_failure_handler),
     Case("Get default channel plan", lora_get_channel_plan_test, greentea_failure_handler),
     Case("Remove channel", lora_remove_channel_test, greentea_failure_handler),
     Case("Remove channel plan", lora_remove_channel_plan, greentea_failure_handler),
@@ -1185,23 +930,20 @@ static void lora_event_handler(lorawan_events_t events)
     lora_helper.add_event(events);
 }
 
-static lorawan_app_callbacks_t callbacks;
-
-int main() {
-
-    // start thread to handle events
+int main()
+{
     t.start(callback(&ev_queue, &EventQueue::dispatch_forever));
 
-    lorawan_status_t ret;
-
+    lorawan_app_callbacks_t callbacks;
     callbacks.events = mbed::callback(lora_event_handler);
-
     lorawan.add_app_callbacks(&callbacks);
 
-    ret = lorawan.initialize(&ev_queue);
-    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_OK, "Lora layer initialization failed");
+    lorawan_status_t ret = lorawan.initialize(&ev_queue);
+    if (ret != LORAWAN_STATUS_OK) {
+        TEST_ASSERT_MESSAGE(false, "Initialization failed");
+        return ret;
+    }
 
     Specification specification(greentea_test_setup, cases, greentea_test_teardown_handler);
     Harness::run(specification);
 }
-
