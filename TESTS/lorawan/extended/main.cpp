@@ -894,6 +894,23 @@ void lora_channel_plan_extended()
     disconnect_lora();
 }
 
+void send_message_with_null_buffer()
+{
+    int16_t ret = 0;
+
+    connect_lora();
+
+    // Check that error is returned if buffer is NULL and length = 0
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, NULL, 0, MSG_CONFIRMED_FLAG);
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_PARAMETER_INVALID, "Send returned incorrect value!");
+
+    // Check that error is returned if buffer is NULL and length > 0
+    ret = lorawan.send(MBED_CONF_LORA_APP_PORT, NULL, 1, MSG_CONFIRMED_FLAG);
+    TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_PARAMETER_INVALID, "Send returned incorrect value!");
+
+    disconnect_lora();
+}
+
 utest::v1::status_t greentea_failure_handler(const Case *const source, const failure_t reason) {
     greentea_case_failure_abort_handler(source, reason);
     return STATUS_CONTINUE;
@@ -911,7 +928,8 @@ Case cases[] = {
     Case("Channel plan extended", lora_channel_plan_extended, greentea_failure_handler),
     Case("TX, send incorrect type message", lora_tx_send_incorrect_type, greentea_failure_handler),
     Case("TX, send fill buffer", lora_tx_send_fill_buffer, greentea_failure_handler),
-    Case("TX, send without connection", lora_tx_send_without_connect, greentea_failure_handler)
+    Case("TX, send without connection", lora_tx_send_without_connect, greentea_failure_handler),
+    Case("TX, send with null buffer", send_message_with_null_buffer, greentea_failure_handler),
 };
 
 utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
