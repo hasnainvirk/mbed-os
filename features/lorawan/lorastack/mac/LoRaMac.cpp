@@ -119,6 +119,8 @@ LoRaMac::LoRaMac(LoRaWANTimeHandler &lora_time)
 
     _params.sys_params.adr_on = false;
     _params.sys_params.max_duty_cycle = 0;
+
+    LoRaMacPrimitives = NULL;
 }
 
 LoRaMac::~LoRaMac()
@@ -293,7 +295,6 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
     uint8_t pktHeaderLen = 0;
     uint32_t address = 0;
     uint8_t appPayloadStartIndex = 0;
-    uint8_t port = 0xFF;
     uint8_t frameLen = 0;
     uint32_t mic = 0;
     uint32_t micRx = 0;
@@ -596,7 +597,7 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                     // Process payload and MAC commands
                     if( ( ( size - 4 ) - appPayloadStartIndex ) > 0 )
                     {
-                        port = payload[appPayloadStartIndex++];
+                        uint8_t port = payload[appPayloadStartIndex++];
                         frameLen = ( size - 4 ) - appPayloadStartIndex;
 
                         mcps.get_indication().port = port;
@@ -1186,7 +1187,6 @@ void LoRaMac::SetMlmeScheduleUplinkIndication( void )
 lorawan_status_t LoRaMac::Send( loramac_mhdr_t *macHdr, uint8_t fPort, void *fBuffer, uint16_t fBufferSize )
 {
     loramac_frame_ctrl_t fCtrl;
-    lorawan_status_t status = LORAWAN_STATUS_PARAMETER_INVALID;
 
     fCtrl.value = 0;
     fCtrl.bits.fopts_len     = 0;
@@ -1196,7 +1196,7 @@ lorawan_status_t LoRaMac::Send( loramac_mhdr_t *macHdr, uint8_t fPort, void *fBu
     fCtrl.bits.adr           = _params.sys_params.adr_on;
 
     // Prepare the frame
-    status = PrepareFrame( macHdr, &fCtrl, fPort, fBuffer, fBufferSize );
+    lorawan_status_t status = PrepareFrame( macHdr, &fCtrl, fPort, fBuffer, fBufferSize );
 
     // Validate status
     if( status != LORAWAN_STATUS_OK )
