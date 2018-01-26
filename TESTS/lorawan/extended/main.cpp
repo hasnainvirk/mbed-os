@@ -78,9 +78,6 @@ void lora_connect_with_params_wrong_type()
     lorawan_status_t ret;
     lorawan_connect_t params;
 
-    //Allow upcoming events
-    lora_helper.event_lock = false;
-
     params.connect_type = (lorawan_connect_type_t)100;
     ret = lorawan.connect(params);
     TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_PARAMETER_INVALID, "Incorrect return value, expected LORAWAN_STATUS_PARAMETER_INVALID");
@@ -93,9 +90,6 @@ void lora_connect_with_params_otaa_ok()
     lorawan_status_t ret;
     lorawan_connect_t params;
     uint8_t counter = 0;
-
-    //Allow upcoming events
-    lora_helper.event_lock = false;
 
     // Although this test is meant to be using connect with given parameters,
     // we can't give it any arbitrary parameters. The Network server running
@@ -144,9 +138,6 @@ void lora_connect_with_params_abp_ok()
     uint8_t my_app_nwk_skey[] = MBED_CONF_LORA_NWKSKEY;
     uint8_t my_app_skey[] = MBED_CONF_LORA_APPSKEY;
 
-    //Allow upcoming events
-    lora_helper.event_lock = false;
-
     params.connect_type = LORAWAN_CONNECTION_ABP;
     params.connection_u.abp.dev_addr = MBED_CONF_LORA_DEVICE_ADDRESS;
     params.connection_u.abp.nwk_skey = my_app_nwk_skey;
@@ -179,9 +170,6 @@ void lora_tx_send_incorrect_type()
     uint8_t tx_data[11] = {"l"};
     int type_incorrect = 0x03; //No 0x03 type defined
 
-    //Allow upcoming events
-    lora_helper.event_lock = false;
-
     connect_lora();
 
     //ret = lorawan.send(session, message);
@@ -195,9 +183,6 @@ void lora_tx_send_fill_buffer()
 {
     int16_t ret;
     uint8_t tx_data[11] = {"l"};
-
-    //Allow upcoming events
-    lora_helper.event_lock = false;
 
     connect_lora();
 
@@ -215,9 +200,6 @@ void lora_tx_send_without_connect()
     int16_t ret;
     uint8_t tx_data[11] = {"l"};
 
-    //Allow upcoming events
-    lora_helper.event_lock = false;
-
     ret = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_data, sizeof(tx_data), MSG_UNCONFIRMED_FLAG);
     TEST_ASSERT_MESSAGE(ret == LORAWAN_STATUS_NO_ACTIVE_SESSIONS, "Incorrect return value");
 
@@ -230,9 +212,6 @@ void lora_get_channel_plan_test()
     TEST_ASSERT_MESSAGE(false, "Only EU band is supported");
     return;
 #endif
-
-    //Allow upcoming events
-    lora_helper.event_lock = false;
 
     loramac_channel_t channels[16];
     lorawan_channelplan_t plan;
@@ -285,9 +264,6 @@ void lora_remove_channel_test()
     TEST_ASSERT_MESSAGE(false, "Only EU band is supported");
     return;
 #endif
-
-    //Allow upcoming events
-    lora_helper.event_lock = false;
 
     loramac_channel_t channels[16];
     lorawan_channelplan_t plan;
@@ -376,8 +352,6 @@ void lora_remove_channel_plan()
     TEST_ASSERT_MESSAGE(false, "Only EU band is supported");
     return;
 #endif
-    //Allow upcoming events
-    lora_helper.event_lock = false;
 
     loramac_channel_t channels[16];
     lorawan_channelplan_t plan;
@@ -464,9 +438,6 @@ void lora_set_all_channel_plan_test()
     TEST_ASSERT_MESSAGE(false, "Only EU band is supported");
     return;
 #endif
-
-    //Allow upcoming events
-    lora_helper.event_lock = false;
 
     loramac_channel_t channels[16];
     lorawan_channelplan_t plan;
@@ -635,9 +606,6 @@ void lora_set_6_channel_plan_test()
     return;
 #endif
 
-    //Allow upcoming events
-    lora_helper.event_lock = false;
-
     loramac_channel_t channels[16];
     lorawan_channelplan_t plan;
     plan.channels = channels;
@@ -721,9 +689,6 @@ void lora_channel_plan_extended()
     TEST_ASSERT_MESSAGE(false, "Only EU band is supported");
     return;
 #endif
-
-    //Allow upcoming events
-    lora_helper.event_lock = false;
 
     loramac_channel_t channels[16];
     lorawan_channelplan_t plan;
