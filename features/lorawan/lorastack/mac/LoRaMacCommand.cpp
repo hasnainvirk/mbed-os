@@ -45,8 +45,9 @@ LoRaMacCommand::LoRaMacCommand(LoRaMac& lora_mac)
     MacCommandsInNextTx = false;
     MacCommandsBufferIndex = 0;
     MacCommandsBufferToRepeatIndex = 0;
-    //uint8_t MacCommandsBuffer[LORA_MAC_COMMAND_MAX_LENGTH];
-    //uint8_t MacCommandsBufferToRepeat[LORA_MAC_COMMAND_MAX_LENGTH];
+
+    memset(MacCommandsBuffer, 0, sizeof(MacCommandsBuffer));
+    memset(MacCommandsBufferToRepeat, 0, sizeof(MacCommandsBufferToRepeat));
 }
 
 LoRaMacCommand::~LoRaMacCommand()
@@ -315,7 +316,6 @@ void LoRaMacCommand::ProcessMacCommands(uint8_t *payload, uint8_t macIndex,
             case SRV_MAC_RX_PARAM_SETUP_REQ:
                 {
                     RxParamSetupReqParams_t rxParamSetupReq;
-                    status = 0x07;
 
                     rxParamSetupReq.DrOffset = ( payload[macIndex] >> 4 ) & 0x07;
                     rxParamSetupReq.Datarate = payload[macIndex] & 0x0F;
@@ -350,7 +350,6 @@ void LoRaMacCommand::ProcessMacCommands(uint8_t *payload, uint8_t macIndex,
                 {
                     NewChannelReqParams_t newChannelReq;
                     channel_params_t chParam;
-                    status = 0x03;
 
                     newChannelReq.ChannelId = payload[macIndex++];
                     newChannelReq.NewChannel = &chParam;
@@ -413,7 +412,6 @@ void LoRaMacCommand::ProcessMacCommands(uint8_t *payload, uint8_t macIndex,
             case SRV_MAC_DL_CHANNEL_REQ:
                 {
                     DlChannelReqParams_t dlChannelReq;
-                    status = 0x03;
 
                     dlChannelReq.ChannelId = payload[macIndex++];
                     dlChannelReq.Rx1Frequency = ( uint32_t )payload[macIndex++];
