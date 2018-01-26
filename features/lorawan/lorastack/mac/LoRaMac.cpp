@@ -36,10 +36,6 @@ SPDX-License-Identifier: BSD-3-Clause
 
 using namespace events;
 
-/**
- * EventQueue object storage
- */
-static EventQueue *ev_queue;
 
 /*!
  * Maximum length of the fOpts field
