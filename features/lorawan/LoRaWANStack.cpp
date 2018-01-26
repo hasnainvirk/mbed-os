@@ -597,6 +597,10 @@ int16_t LoRaWANStack::handle_tx(uint8_t port, const uint8_t* data,
         return LORAWAN_STATUS_WOULD_BLOCK;
     }
 
+    if (!data && length > 0) {
+        return LORAWAN_STATUS_PARAMETER_INVALID;
+    }
+
 #if defined(LORAWAN_COMPLIANCE_TEST)
     if (_compliance_test.running) {
         return LORAWAN_STATUS_COMPLIANCE_TEST_ON;
@@ -653,7 +657,7 @@ int16_t LoRaWANStack::handle_tx(uint8_t port, const uint8_t* data,
         _tx_msg.f_buffer_size = length;
         _tx_msg.pending_size = 0;
         // copy user buffer upto the max_possible_size
-        if (data && length > 0) {
+        if (length > 0) {
             memcpy(_tx_msg.f_buffer, data, length);
         }
     }
