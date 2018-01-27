@@ -107,15 +107,11 @@ LoRaWANStack::LoRaWANStack()
      memset(&_lw_session, 0, sizeof(_lw_session));
      memset(&_tx_msg, 0, sizeof(_tx_msg));
      memset(&_rx_msg, 0, sizeof(_rx_msg));
-
-     LoRaMacPrimitives.mcps_confirm     = callback(this, &LoRaWANStack::mcps_confirm_handler);
-     LoRaMacPrimitives.mcps_indication  = callback(this, &LoRaWANStack::mcps_indication_handler);
-     LoRaMacPrimitives.mlme_confirm     = callback(this, &LoRaWANStack::mlme_confirm_handler);
-     LoRaMacPrimitives.mlme_indication  = callback(this, &LoRaWANStack::mlme_indication_handler);
 }
 
 LoRaWANStack::~LoRaWANStack()
 {
+
 }
 
 /*****************************************************************************
@@ -135,7 +131,6 @@ radio_events_t *LoRaWANStack::bind_radio_driver(LoRaRadio& radio)
     _lora_phy.set_radio_instance(radio);
     return _mac_handlers;
 }
-
 lorawan_status_t LoRaWANStack::initialize_mac_layer(EventQueue *queue)
 {
     if (DEVICE_STATE_NOT_INITIALIZED != _device_current_state)
@@ -144,19 +139,30 @@ lorawan_status_t LoRaWANStack::initialize_mac_layer(EventQueue *queue)
         return LORAWAN_STATUS_OK;
     }
 
+    static loramac_primitives_t LoRaMacPrimitives;
+    static loramac_mib_req_confirm_t mib_req;
+
+#if defined(LORAWAN_COMPLIANCE_TEST)
+    static uint8_t compliance_test_buffer[MBED_CONF_LORA_TX_MAX_SIZE];
+#endif
+
     tr_debug("Initializing MAC layer");
 
     //store a pointer to Event Queue
     _queue = queue;
 
 #if defined(LORAWAN_COMPLIANCE_TEST)
+    // Allocate memory for compliance test
     _compliance_test.app_data_buffer = compliance_test_buffer;
 #endif
 
     _lora_time.TimerTimeCounterInit(queue);
-    _loramac.LoRaMacInitialization(&LoRaMacPrimitives, &_lora_phy, queue);
 
-    loramac_mib_req_confirm_t mib_req;
+    LoRaMacPrimitives.mcps_confirm = callback(this, &LoRaWANStack::mcps_confirm_handler);
+    LoRaMacPrimitives.mcps_indication = callback(this, &LoRaWANStack::mcps_indication_handler);
+    LoRaMacPrimitives.mlme_confirm = callback(this, &LoRaWANStack::mlme_confirm_handler);
+    LoRaMacPrimitives.mlme_indication = callback(this, &LoRaWANStack::mlme_indication_handler);
+    _loramac.LoRaMacInitialization(&LoRaMacPrimitives, &_lora_phy, queue);
 
     mib_req.type = MIB_ADR;
     mib_req.param.is_adr_enable = MBED_CONF_LORA_ADR_ON;
@@ -378,6 +384,7 @@ void LoRaWANStack::mlme_indication_handler(loramac_mlme_indication_t *mlmeIndica
             break;
     }
 }
+
 
 void LoRaWANStack::set_lora_callbacks(lorawan_app_callbacks_t *cbs)
 {

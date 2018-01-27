@@ -687,11 +687,6 @@ private:
      * LoRaMac upper layer event functions
      */
     loramac_primitives_t *LoRaMacPrimitives;
-
-    /**
-     * EventQueue object storage
-     */
-    events::EventQueue *ev_queue;
 };
 
 
