@@ -22,6 +22,8 @@
 
 using namespace utest::v1;
 
+static const uint32_t TEST_WAIT = 500;
+
 LoRaWANInterface lorawan(Radio);
 LoRaTestHelper lora_helper;
 
@@ -54,7 +56,7 @@ void connection_without_params_abp_wrong_keys()
             TEST_ASSERT_MESSAGE(false, "Connection timeout");
             return;
         }
-        wait_ms(1000);
+        wait_ms(TEST_WAIT);
         counter += 1;
     }
     counter = 0;
@@ -78,7 +80,7 @@ void connection_without_params_abp_wrong_keys()
             return;
         }
 
-        wait_ms(1000);
+        wait_ms(TEST_WAIT);
         counter++;
     }
 
@@ -98,7 +100,7 @@ void connection_without_params_abp_wrong_keys()
             // Test success.
             break;
         }
-        wait_ms(1000);
+        wait_ms(TEST_WAIT);
         counter += 1;
     }
 
