@@ -876,7 +876,11 @@ void send_message_with_null_buffer()
     disconnect_lora();
 }
 
-utest::v1::status_t greentea_failure_handler(const Case *const source, const failure_t reason) {
+utest::v1::status_t greentea_failure_handler(const Case *const source, const failure_t reason)
+{
+    lorawan.remove_link_check_request();
+    disconnect_lora();
+
     greentea_case_failure_abort_handler(source, reason);
     return STATUS_CONTINUE;
 }
