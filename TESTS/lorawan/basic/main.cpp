@@ -26,11 +26,6 @@ LoRaWANInterface lorawan(Radio);
 LoRaTestHelper lora_helper;
 static bool link_check_response;
 
-utest::v1::status_t greentea_failure_handler(const Case *const source, const failure_t reason) {
-    greentea_case_failure_abort_handler(source, reason);
-    return STATUS_CONTINUE;
-}
-
 static const uint32_t TEST_WAIT = 500;
 
 bool connect_lora()
@@ -1415,6 +1410,14 @@ void lora_set_data_rate()
     disconnect_lora();
 }
 
+utest::v1::status_t greentea_failure_handler(const Case *const source, const failure_t reason)
+{
+    lorawan.remove_link_check_request();
+    disconnect_lora();
+
+    greentea_case_failure_abort_handler(source, reason);
+    return STATUS_CONTINUE;
+}
 
 Case cases[] = {
     Case("TX, send empty message", lora_tx_send_empty, greentea_failure_handler),
