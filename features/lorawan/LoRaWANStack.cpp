@@ -827,7 +827,6 @@ void LoRaWANStack::mlme_confirm_handler(loramac_mlme_confirm_t *mlme_confirm)
             }
             break;
         default:
-            return;
             break;
     }
 }
@@ -1269,7 +1268,6 @@ lorawan_status_t LoRaWANStack::lora_state_machine()
                 return LORAWAN_STATUS_CONNECT_IN_PROGRESS;
             } else {
                 status = LORAWAN_STATUS_PARAMETER_INVALID;
-                break;
             }
             break;
         case DEVICE_STATE_JOINED:
