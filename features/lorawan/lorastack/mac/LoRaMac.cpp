@@ -129,64 +129,88 @@ LoRaMac::~LoRaMac()
  **************************************************************************/
 void LoRaMac::handle_tx_done(void)
 {
-    ev_queue->call(this, &LoRaMac::OnRadioTxDone);
+    const int ret = ev_queue->call(this, &LoRaMac::OnRadioTxDone);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_rx_done(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
 {
-    ev_queue->call(this, &LoRaMac::OnRadioRxDone, payload, size, rssi, snr);
+    const int ret = ev_queue->call(this, &LoRaMac::OnRadioRxDone, payload, size, rssi, snr);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_rx_error(void)
 {
-    ev_queue->call(this, &LoRaMac::OnRadioRxError);
+    const int ret = ev_queue->call(this, &LoRaMac::OnRadioRxError);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_rx_timeout(void)
 {
-    ev_queue->call(this, &LoRaMac::OnRadioRxTimeout);
+    const int ret = ev_queue->call(this, &LoRaMac::OnRadioRxTimeout);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_tx_timeout(void)
 {
-    ev_queue->call(this, &LoRaMac::OnRadioTxTimeout);
+    const int ret = ev_queue->call(this, &LoRaMac::OnRadioTxTimeout);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_cad_done(bool cad)
 {
     //TODO Not implemented yet
-    //ev_queue->call(this, &LoRaMac::OnRadioCadDone, cad);
+    //const int ret = ev_queue->call(this, &LoRaMac::OnRadioCadDone, cad);
+    //MBED_ASSERT(ret != 0);
+    //(void)ret;
 }
 
 void LoRaMac::handle_fhss_change_channel(uint8_t cur_channel)
 {
     // TODO Not implemented yet
-    //ev_queue->call(this, &LoRaMac::OnRadioFHSSChangeChannel, cur_channel);
+    //const int ret = ev_queue->call(this, &LoRaMac::OnRadioFHSSChangeChannel, cur_channel);
+    //MBED_ASSERT(ret != 0);
+    //(void)ret;
 }
 
 void LoRaMac::handle_mac_state_check_timer_event(void)
 {
-    ev_queue->call(this, &LoRaMac::OnMacStateCheckTimerEvent);
+    const int ret = ev_queue->call(this, &LoRaMac::OnMacStateCheckTimerEvent);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_delayed_tx_timer_event(void)
 {
-    ev_queue->call(this, &LoRaMac::OnTxDelayedTimerEvent);
+    const int ret = ev_queue->call(this, &LoRaMac::OnTxDelayedTimerEvent);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_ack_timeout()
 {
-    ev_queue->call(this, &LoRaMac::OnAckTimeoutTimerEvent);
+    const int ret = ev_queue->call(this, &LoRaMac::OnAckTimeoutTimerEvent);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_rx1_timer_event(void)
 {
-    ev_queue->call(this, &LoRaMac::OnRxWindow1TimerEvent);
+    const int ret = ev_queue->call(this, &LoRaMac::OnRxWindow1TimerEvent);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 void LoRaMac::handle_rx2_timer_event(void)
 {
-    ev_queue->call(this, &LoRaMac::OnRxWindow2TimerEvent);
+    const int ret = ev_queue->call(this, &LoRaMac::OnRxWindow2TimerEvent);
+    MBED_ASSERT(ret != 0);
+    (void)ret;
 }
 
 /***************************************************************************
