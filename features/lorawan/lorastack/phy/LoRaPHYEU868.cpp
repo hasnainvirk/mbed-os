@@ -31,7 +31,6 @@
 
 #include "LoRaPHYEU868.h"
 #include "lora_phy_ds.h"
-#include "LoRaRadio.h"
 
 /*!
  * Number of default channels
@@ -183,53 +182,54 @@
  * Band 0 definition
  * { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define EU868_BAND0                {100 , EU868_MAX_TX_POWER, 0, 0, 0,865000000, 868000000} //  1.0 %
+static const band_t EU868_BAND0 = {100 , EU868_MAX_TX_POWER, 0, 0, 0,865000000, 868000000}; //  1.0 %
 /*!
  * Band 1 definition
  * { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define EU868_BAND1                {100 , EU868_MAX_TX_POWER, 0, 0, 0, 868100000, 868600000} //  1.0 %
+static const band_t EU868_BAND1 = {100 , EU868_MAX_TX_POWER, 0, 0, 0, 868100000, 868600000}; //  1.0 %
 
 /*!
  * Band 2 definition
  * Band = { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define EU868_BAND2                {1000, EU868_MAX_TX_POWER, 0, 0, 0, 868700000, 869200000} //  0.1 %
+static const band_t EU868_BAND2 = {1000, EU868_MAX_TX_POWER, 0, 0, 0, 868700000, 869200000}; //  0.1 %
 
 /*!
  * Band 3 definition
  * Band = { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define EU868_BAND3                {10  , EU868_MAX_TX_POWER, 0, 0, 0, 869400000, 869650000} // 10.0 %
+static const band_t EU868_BAND3 = {10  , EU868_MAX_TX_POWER, 0, 0, 0, 869400000, 869650000}; // 10.0 %
 
 /*!
  * Band 4 definition
  * Band = { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define EU868_BAND4                {100 , EU868_MAX_TX_POWER, 0, 0, 0, 869700000, 870000000} //  1.0 %
+static const band_t EU868_BAND4 = {100 , EU868_MAX_TX_POWER, 0, 0, 0, 869700000, 870000000}; //  1.0 %
 
 /*!
  * Band 5 definition - It's actually a sub part of Band 2
  * Band = { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define EU868_BAND5                {1000, EU868_MAX_TX_POWER, 0, 0, 0, 863000000, 865000000} //  0.1 %
+static const band_t EU868_BAND5 = {1000, EU868_MAX_TX_POWER, 0, 0, 0, 863000000, 865000000}; //  0.1 %
+
 /*!
  * LoRaMac default channel 1
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define EU868_LC1                  {868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1}
+static const channel_params_t EU868_LC1 = {868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1};
 
 /*!
  * LoRaMac default channel 2
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define EU868_LC2                  {868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1}
+static const channel_params_t EU868_LC2 = {868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1};
 
 /*!
  * LoRaMac default channel 3
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define EU868_LC3                  {868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1}
+static const channel_params_t EU868_LC3 = {868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1};
 
 /*!
  * LoRaMac channels which are allowed for the join procedure
@@ -259,17 +259,17 @@ static const uint8_t max_payloads_repeater_EU868[] = {51, 51, 51, 115, 222, 222,
 LoRaPHYEU868::LoRaPHYEU868(LoRaWANTimeHandler &lora_time)
     : LoRaPHY(lora_time)
 {
-    bands[0] = (const band_t) EU868_BAND0;
-    bands[1] = (const band_t) EU868_BAND1;
-    bands[2] = (const band_t) EU868_BAND2;
-    bands[3] = (const band_t) EU868_BAND3;
-    bands[4] = (const band_t) EU868_BAND4;
-    bands[5] = (const band_t) EU868_BAND5;
+    bands[0] = EU868_BAND0;
+    bands[1] = EU868_BAND1;
+    bands[2] = EU868_BAND2;
+    bands[3] = EU868_BAND3;
+    bands[4] = EU868_BAND4;
+    bands[5] = EU868_BAND5;
 
     // Default Channels are always enabled, rest will be added later
-    channels[0] = (const channel_params_t) EU868_LC1;
-    channels[1] = (const channel_params_t) EU868_LC2;
-    channels[2] = (const channel_params_t) EU868_LC3;
+    channels[0] = EU868_LC1;
+    channels[1] = EU868_LC2;
+    channels[2] = EU868_LC3;
 
     // Initialize the channels default mask
     default_channel_masks[0] = LC(1) + LC(2) + LC(3);

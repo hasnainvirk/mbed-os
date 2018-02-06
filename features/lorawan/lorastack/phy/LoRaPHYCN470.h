@@ -33,7 +33,6 @@
 #define MBED_OS_LORAPHY_CN470_H_
 
 #include "LoRaPHY.h"
-#include "netsocket/LoRaRadio.h"
 
 // Definitions
 /*!

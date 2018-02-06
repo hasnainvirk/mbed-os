@@ -31,7 +31,6 @@
 
 #include "LoRaPHYAS923.h"
 #include "lora_phy_ds.h"
-#include "LoRaRadio.h"
 
 /*!
  * Number of default channels
@@ -189,19 +188,19 @@
  * Band 0 definition
  * { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define AS923_BAND0                                 {100, AS923_MAX_TX_POWER, 0, 0, 0, 923000000, 928000000} //  1.0 %
+static const band_t AS923_BAND0 = {100, AS923_MAX_TX_POWER, 0, 0, 0, 923000000, 928000000}; //  1.0 %
 
 /*!
  * LoRaMac default channel 1
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define AS923_LC1                                   { 923200000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+static const channel_params_t AS923_LC1 = { 923200000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 };
 
 /*!
  * LoRaMac default channel 2
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define AS923_LC2                                   { 923400000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+static const channel_params_t AS923_LC2 = { 923400000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 };
 
 /*!
  * LoRaMac channels which are allowed for the join procedure
@@ -245,12 +244,12 @@ static const int8_t rx1_dr_offset_AS923[] = {0, 1, 2, 3, 4, 5, -1, -2};
 LoRaPHYAS923::LoRaPHYAS923(LoRaWANTimeHandler &lora_time)
     : LoRaPHY(lora_time)
 {
-    bands[0] = (const band_t) AS923_BAND0;
+    bands[0] = AS923_BAND0;
 
     // Default Channels are always enabled in the channel list,
     // rest will be added later
-    channels[0] = (const channel_params_t) AS923_LC1;
-    channels[1] = (const channel_params_t) AS923_LC2;
+    channels[0] = AS923_LC1;
+    channels[1] = AS923_LC2;
 
     // Initialize the default channel mask
     default_channel_masks[0] = LC(1) + LC(2);

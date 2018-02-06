@@ -30,9 +30,7 @@
  */
 
 #include "LoRaPHYKR920.h"
-
 #include "lora_phy_ds.h"
-#include "LoRaRadio.h"
 
 
 /*!
@@ -188,25 +186,25 @@
  * Band 0 definition
  * { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define KR920_BAND0                                 { 1 , KR920_MAX_TX_POWER, 0, 0, 0 } //  100.0 %
+static const band_t KR920_BAND0 = { 1 , KR920_MAX_TX_POWER, 0, 0, 0 }; //  100.0 %
 
 /*!
  * LoRaMac default channel 1
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define KR920_LC1                                   { 922100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+static const channel_params_t KR920_LC1 = { 922100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 };
 
 /*!
  * LoRaMac default channel 2
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define KR920_LC2                                   { 922300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+static const channel_params_t KR920_LC2 = { 922300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 };
 
 /*!
  * LoRaMac default channel 3
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define KR920_LC3                                   { 922500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+static const channel_params_t KR920_LC3 = { 922500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 };
 
 /*!
  * LoRaMac channels which are allowed for the join procedure
@@ -246,12 +244,12 @@ static const uint8_t max_payloads_with_repeater_KR920[] = { 51, 51, 51, 115, 222
 LoRaPHYKR920::LoRaPHYKR920(LoRaWANTimeHandler &lora_time)
     : LoRaPHY(lora_time)
 {
-    bands[0] = (const band_t) KR920_BAND0;
+    bands[0] = KR920_BAND0;
 
     // Channels
-    channels[0] = (const channel_params_t) KR920_LC1;
-    channels[1] = (const channel_params_t) KR920_LC2;
-    channels[2] = (const channel_params_t) KR920_LC3;
+    channels[0] = KR920_LC1;
+    channels[1] = KR920_LC2;
+    channels[2] = KR920_LC3;
 
     // Initialize the channels default mask
     default_channel_masks[0] = LC( 1 ) + LC( 2 ) + LC( 3 );
@@ -480,8 +478,10 @@ bool LoRaPHYKR920::set_next_channel(channel_selection_params_t* params,
     }
 }
 
-void LoRaPHYKR920::set_tx_cont_mode(cw_mode_params_t* params)
+void LoRaPHYKR920::set_tx_cont_mode(cw_mode_params_t* params, uint32_t given_frequency)
 {
+    (void)given_frequency;
+
     if (params->tx_power > bands[channels[params->channel].band].max_tx_pwr) {
         params->tx_power = bands[channels[params->channel].band].max_tx_pwr;
     }
