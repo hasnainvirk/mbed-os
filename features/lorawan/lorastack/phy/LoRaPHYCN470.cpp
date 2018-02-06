@@ -30,9 +30,7 @@
  */
 
 #include "LoRaPHYCN470.h"
-
 #include "lora_phy_ds.h"
-#include "LoRaRadio.h"
 
 /*!
  * Minimal datarate that can be used by the node
@@ -168,7 +166,7 @@
  * Band 0 definition
  * { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define CN470_BAND0                                 {1, CN470_MAX_TX_POWER, 0, 0, 0} //  100.0 %
+static const band_t CN470_BAND0 = {1, CN470_MAX_TX_POWER, 0, 0, 0}; //  100.0 %
 
 /*!
  * Defines the first channel for RX window 1 for CN470 band
@@ -209,7 +207,7 @@ static const uint8_t max_payloads_with_repeater_CN470[] = {51, 51, 51, 115, 222,
 LoRaPHYCN470::LoRaPHYCN470(LoRaWANTimeHandler &lora_time)
         : LoRaPHY(lora_time)
 {
-    bands[0] = (const band_t) CN470_BAND0;
+    bands[0] = CN470_BAND0;
 
     // Channels
     // 125 kHz channels

@@ -75,15 +75,11 @@ void LoRaPHY::setup_public_network_mode(bool set)
 void LoRaPHY::setup_rx_window(bool rx_continuous, uint32_t max_rx_window)
 {
     _radio->lock();
-
     if (!rx_continuous) {
         _radio->receive(max_rx_window);
-        _radio->unlock();
-        return;
+    } else {
+        _radio->receive(0); // Continuous mode
     }
-
-    _radio->receive(0); // Continuous mode
-
     _radio->unlock();
 }
 
@@ -859,7 +855,7 @@ bool LoRaPHY::rx_config(rx_config_params_t* rx_conf, int8_t* datarate)
     _radio->set_channel(frequency);
 
     // Radio configuration
-    if (phy_dr == DR_7 && phy_params.fsk_supported) {
+    if (dr == DR_7 && phy_params.fsk_supported) {
         modem = MODEM_FSK;
         _radio->set_rx_config(modem, 50000, phy_dr * 1000, 0, 83333, 5,
                               rx_conf->window_timeout, false, 0, true, 0, 0,
@@ -871,15 +867,11 @@ bool LoRaPHY::rx_config(rx_config_params_t* rx_conf, int8_t* datarate)
                               true, rx_conf->is_rx_continuous);
     }
 
-    _radio->unlock();
-
     if (rx_conf->is_repeater_supported) {
         max_payload = payload_with_repeater_table[dr];
     } else {
         max_payload = payload_table[dr];
     }
-
-    _radio->lock();
 
     _radio->set_max_payload_length(modem, max_payload + LORA_MAC_FRMPAYLOAD_OVERHEAD);
 
@@ -911,32 +903,28 @@ bool LoRaPHY::tx_config(tx_config_params_t* tx_conf, int8_t* tx_power,
     phy_tx_power = compute_tx_power(tx_conf->tx_power, tx_conf->max_eirp,
                                     tx_conf->antenna_gain);
 
-    // Setup the radio frequency
     _radio->lock();
+
+    // Setup the radio frequency
     _radio->set_channel(list[tx_conf->channel].frequency);
-    _radio->unlock();
 
     if( tx_conf->datarate == phy_params.max_tx_datarate ) {
         // High Speed FSK channel
         modem = MODEM_FSK;
-        _radio->lock();
         _radio->set_tx_config(modem, phy_tx_power, 25000, bandwidth,
                               phy_dr * 1000, 0, 5, false, true, 0, 0, false,
                               3000);
-        _radio->unlock();
     } else {
         modem = MODEM_LORA;
-        _radio->lock();
         _radio->set_tx_config(modem, phy_tx_power, 0, bandwidth, phy_dr, 1, 8,
                               false, true, 0, 0, false, 3000 );
-        _radio->unlock();
     }
 
     // Setup maximum payload lenght of the radio driver
-    _radio->lock();
     _radio->set_max_payload_length( modem, tx_conf->pkt_len);
     // Get the time-on-air of the next tx frame
     *tx_toa = _radio->time_on_air(modem, tx_conf->pkt_len);
+
     _radio->unlock();
 
     *tx_power = tx_conf->tx_power;
@@ -1216,6 +1204,7 @@ bool LoRaPHY::set_next_channel(channel_selection_params_t* params,
     uint8_t delay_tx = 0;
 
     uint8_t *enabled_channels = new uint8_t[phy_params.max_channel_cnt];
+    MBED_ASSERT(enabled_channels);
 
     lorawan_time_t next_tx_delay = 0;
     band_t *band_table = (band_t *) phy_params.bands.table;
