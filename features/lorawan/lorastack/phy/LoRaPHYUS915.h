@@ -33,7 +33,6 @@
 #define MBED_OS_LORAPHYUS_915_H_
 
 #include "LoRaPHY.h"
-#include "netsocket/LoRaRadio.h"
 
 /*!
  * LoRaMac maximum number of channels
@@ -74,7 +73,8 @@ public:
     virtual bool set_next_channel(channel_selection_params_t* params, uint8_t* channel,
                                   lorawan_time_t* time, lorawan_time_t* aggregate_timeOff);
 
-    virtual void set_tx_cont_mode(cw_mode_params_t* params);
+    virtual void set_tx_cont_mode(cw_mode_params_t* continuousWave,
+                                  uint32_t frequency = 0);
 
     virtual uint8_t apply_DR_offset(int8_t dr, int8_t dr_offset);
 

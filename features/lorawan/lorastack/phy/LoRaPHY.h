@@ -37,11 +37,11 @@
 #include "lorawan/system/LoRaWANTimer.h"
 #include "lorawan/lorastack/phy/lora_phy_ds.h"
 #include "netsocket/LoRaRadio.h"
+#include "platform/NonCopyable.h"
 
-class LoRaPHY {
+class LoRaPHY : private mbed::NonCopyable<LoRaPHY> {
 
 public:
-    LoRaPHY(LoRaWANTimeHandler &lora_time);
     virtual ~LoRaPHY();
 
     /** Stores a reference to Radio object.
@@ -395,6 +395,8 @@ protected:
     LoRaRadio *_radio;
     LoRaWANTimeHandler &_lora_time;
     loraphy_params_t phy_params;
+
+    LoRaPHY(LoRaWANTimeHandler &lora_time);
 
     /**
      * Verifies the given frequency.

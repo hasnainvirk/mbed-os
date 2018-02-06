@@ -34,7 +34,6 @@
 #define MBED_OS_LORAPHY_AU915_H_
 
 #include "LoRaPHY.h"
-#include "netsocket/LoRaRadio.h"
 
 // Definitions
 /*!
@@ -74,8 +73,6 @@ public:
     virtual bool set_next_channel(channel_selection_params_t* next_chan_params,
                                   uint8_t* channel, lorawan_time_t* time,
                                   lorawan_time_t* aggregate_timeoff);
-
-    virtual void set_tx_cont_mode(cw_mode_params_t* params);
 
     virtual uint8_t apply_DR_offset(int8_t dr, int8_t dr_offset);
 

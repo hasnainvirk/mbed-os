@@ -33,7 +33,6 @@
 #define MBED_OS_LORAPHY_CN779_H_
 
 #include "LoRaPHY.h"
-#include "netsocket/LoRaRadio.h"
 
 #define CN779_MAX_NB_CHANNELS                       16
 

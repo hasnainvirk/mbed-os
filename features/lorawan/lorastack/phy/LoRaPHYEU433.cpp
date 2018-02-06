@@ -30,9 +30,7 @@
  */
 
 #include "LoRaPHYEU433.h"
-
 #include "lora_phy_ds.h"
-#include "LoRaRadio.h"
 
 /*!
  * Number of default channels
@@ -187,25 +185,25 @@
  * Band 0 definition
  * { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define EU433_BAND0                                 {100, EU433_MAX_TX_POWER, 0, 0, 0, 433175000, 434665000} //  1.0 %
+static const band_t EU433_BAND0 = {100, EU433_MAX_TX_POWER, 0, 0, 0, 433175000, 434665000}; //  1.0 %
 
 /*!
  * LoRaMac default channel 1
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define EU433_LC1                                   {433175000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0}
+static const channel_params_t EU433_LC1 = {433175000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0};
 
 /*!
  * LoRaMac default channel 2
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define EU433_LC2                                   {433375000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0}
+static const channel_params_t EU433_LC2 = {433375000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0};
 
 /*!
  * LoRaMac default channel 3
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define EU433_LC3                                   {433575000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0}
+static const channel_params_t EU433_LC3 = {433575000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0};
 
 /*!
  * LoRaMac channels which are allowed for the join procedure
@@ -236,12 +234,12 @@ static const uint8_t max_payloads_with_repeater_EU433[] = {51, 51, 51, 115, 222,
 LoRaPHYEU433::LoRaPHYEU433(LoRaWANTimeHandler &lora_time)
         : LoRaPHY(lora_time)
 {
-    bands[0] = (const band_t) EU433_BAND0;
+    bands[0] = EU433_BAND0;
 
     // Channels
-    channels[0] = (const channel_params_t) EU433_LC1;
-    channels[1] = (const channel_params_t) EU433_LC2;;
-    channels[2] = (const channel_params_t) EU433_LC3;;
+    channels[0] = EU433_LC1;
+    channels[1] = EU433_LC2;;
+    channels[2] = EU433_LC3;;
 
     // Initialize the channels default mask
     default_channel_masks[0] = LC(1) + LC(2) + LC(3);

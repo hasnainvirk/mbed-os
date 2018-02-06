@@ -33,7 +33,6 @@
 #define MBED_OS_LORAPHY_EU433_H_
 
 #include "LoRaPHY.h"
-#include "netsocket/LoRaRadio.h"
 
 /*!
  * LoRaMac maximum number of channels

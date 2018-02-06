@@ -30,9 +30,7 @@
  */
 
 #include "LoRaPHYIN865.h"
-
 #include "lora_phy_ds.h"
-#include "LoRaRadio.h"
 
 
 /*!
@@ -184,25 +182,25 @@
  * Band 0 definition
  * { DutyCycle, TxMaxPower, LastJoinTxDoneTime, LastTxDoneTime, TimeOff }
  */
-#define IN865_BAND0                                 { 1 , IN865_MAX_TX_POWER, 0, 0, 0, 865000000, 867000000 } //  100.0 %
+static const band_t IN865_BAND0 = { 1 , IN865_MAX_TX_POWER, 0, 0, 0, 865000000, 867000000 }; //  100.0 %
 
 /*!
  * LoRaMac default channel 1
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define IN865_LC1                                   { 865062500, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+static const channel_params_t IN865_LC1 = { 865062500, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 };
 
 /*!
  * LoRaMac default channel 2
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define IN865_LC2                                   { 865402500, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+static const channel_params_t IN865_LC2 = { 865402500, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 };
 
 /*!
  * LoRaMac default channel 3
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define IN865_LC3                                   { 865985000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 }
+static const channel_params_t IN865_LC3 = { 865985000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 0 };
 
 /*!
  * LoRaMac channels which are allowed for the join procedure
@@ -237,12 +235,12 @@ static const int8_t rx1_dr_offset_IN865[] = { 0, 1, 2, 3, 4, 5, -1, -2 };
 LoRaPHYIN865::LoRaPHYIN865(LoRaWANTimeHandler &lora_time)
         : LoRaPHY(lora_time)
 {
-    bands[0] = (const band_t) IN865_BAND0;
+    bands[0] = IN865_BAND0;
 
     // Default Channels are always enabled, rest will be added later
-    channels[0] = (const channel_params_t) IN865_LC1;
-    channels[1] = (const channel_params_t) IN865_LC2;
-    channels[2] = (const channel_params_t) IN865_LC3;
+    channels[0] = IN865_LC1;
+    channels[1] = IN865_LC2;
+    channels[2] = IN865_LC3;
 
     // Initialize the channels default mask
     default_channel_masks[0] = LC(1) + LC(2) + LC(3);
