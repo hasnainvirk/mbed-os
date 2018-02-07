@@ -60,7 +60,7 @@ public:
     /*!
      * \brief Adds a new MAC command to be sent.
      *
-     * \Remark MAC layer internal function
+     * \remark MAC layer internal function
      *
      * \param [in] cmd MAC command to be added
      *                 [MOTE_MAC_LINK_CHECK_REQ,
