@@ -1018,9 +1018,11 @@ uint8_t LoRaPHY::link_ADR_request(adr_req_params_t* link_adr_req,
     if (status == 0x07) {
         // Set the channels mask to a default value
         memset(phy_params.channels.mask_list, 0,
-               sizeof(phy_params.channels.mask_list)*phy_params.channels.mask_list_size);
+               sizeof(uint16_t)*phy_params.channels.mask_list_size);
+
         // Update the channels mask
-        copy_channel_mask(phy_params.channels.mask_list, &temp_channel_mask, sizeof(temp_channel_mask));
+        copy_channel_mask(phy_params.channels.mask_list, &temp_channel_mask,
+                          phy_params.channels.mask_list_size);
     }
 
     // Update status variables
