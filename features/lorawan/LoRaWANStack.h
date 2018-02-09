@@ -322,8 +322,10 @@ public:
     /** Shuts down the LoRaWAN protocol.
      *
      * In response to the user call for disconnection, the stack shuts down itself.
+     *
+     * @return          LORAWAN_STATUS_DEVICE_OFF on successfully shutdown.
      */
-    void shutdown();
+    lorawan_status_t shutdown();
 
 private:
     LoRaWANStack();
