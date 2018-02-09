@@ -305,7 +305,7 @@ lorawan_time_t LoRaPHY::update_band_timeoff(bool joined, bool duty_cycle,
 
 uint8_t LoRaPHY::parse_link_ADR_req(uint8_t* payload, link_adr_params_t* params)
 {
-    uint8_t retIndex = 0;
+    uint8_t ret_index = 0;
 
     if (payload[0] == SRV_MAC_LINK_ADR_REQ) {
 
@@ -324,10 +324,10 @@ uint8_t LoRaPHY::parse_link_ADR_req(uint8_t* payload, link_adr_params_t* params)
         params->nb_rep &= 0x0F;
 
         // LinkAdrReq has 4 bytes length + 1 byte CMD
-        retIndex = 5;
+        ret_index = 5;
     }
 
-    return retIndex;
+    return ret_index;
 }
 
 uint8_t LoRaPHY::verify_link_ADR_req(verify_adr_params_t* verify_params,
@@ -942,7 +942,12 @@ uint8_t LoRaPHY::link_ADR_request(adr_req_params_t* link_adr_req,
     link_adr_params_t adr_settings;
     uint8_t next_index = 0;
     uint8_t bytes_processed = 0;
-    uint16_t temp_channel_mask = 0;
+
+    // rather than dynamically allocating memory, we choose to set
+    // a channel mask list size of unity here as we know that all
+    // the PHY layer implementations who have more than 16 channels, i.e.,
+    // have channel mask list size more than unity, override this method.
+    uint16_t temp_channel_masks[1] = {0};
 
     verify_adr_params_t verify_params;
 
@@ -962,10 +967,10 @@ uint8_t LoRaPHY::link_ADR_request(adr_req_params_t* link_adr_req,
         status = 0x07;
 
         // Setup temporary channels mask
-        temp_channel_mask = adr_settings.channel_mask;
+        temp_channel_masks[0] = adr_settings.channel_mask;
 
         // Verify channels mask
-        if (adr_settings.ch_mask_ctrl == 0 && temp_channel_mask == 0) {
+        if (adr_settings.ch_mask_ctrl == 0 && temp_channel_masks[0] == 0) {
             status &= 0xFE; // Channel mask KO
         }
 
@@ -978,7 +983,7 @@ uint8_t LoRaPHY::link_ADR_request(adr_req_params_t* link_adr_req,
                 // turn on all channels if channel mask control is 6
                 if (adr_settings.ch_mask_ctrl == 6) {
                     if (phy_params.channels.channel_list[i].frequency != 0) {
-                        temp_channel_mask |= 1 << i;
+                        temp_channel_masks[0] |= 1 << i;
                     }
 
                     continue;
@@ -986,7 +991,7 @@ uint8_t LoRaPHY::link_ADR_request(adr_req_params_t* link_adr_req,
 
                 // if channel mask control is 0, we test the bits and
                 // frequencies and change the status if we find a discrepancy
-                if (((temp_channel_mask & (1 << i)) != 0)
+                if (((temp_channel_masks[0] & (1 << i)) != 0)
                         && (phy_params.channels.channel_list[i].frequency == 0)) {
                     // Trying to enable an undefined channel
                     status &= 0xFE; // Channel mask KO
@@ -1010,7 +1015,7 @@ uint8_t LoRaPHY::link_ADR_request(adr_req_params_t* link_adr_req,
     verify_params.nb_rep = adr_settings.nb_rep;
 
 
-    verify_params.channel_mask = &temp_channel_mask;
+    verify_params.channel_mask = temp_channel_masks;
 
     // Verify the parameters and update, if necessary
     status = verify_link_ADR_req(&verify_params, &adr_settings.datarate,
@@ -1023,7 +1028,7 @@ uint8_t LoRaPHY::link_ADR_request(adr_req_params_t* link_adr_req,
                sizeof(uint16_t)*phy_params.channels.mask_list_size);
 
         // Update the channels mask
-        copy_channel_mask(phy_params.channels.mask_list, &temp_channel_mask,
+        copy_channel_mask(phy_params.channels.mask_list, temp_channel_masks,
                           phy_params.channels.mask_list_size);
     }
 
@@ -1207,9 +1212,14 @@ bool LoRaPHY::set_next_channel(channel_selection_params_t* params,
     uint8_t channel_count = 0;
     uint8_t delay_tx = 0;
 
-    uint8_t *enabled_channels = new uint8_t[phy_params.max_channel_cnt];
-    memset(enabled_channels, 0xFF, sizeof(uint8_t)*phy_params.max_channel_cnt);
-    MBED_ASSERT(enabled_channels);
+    // Note here that the PHY layer implementations which have more than
+    // 16 channels at their disposal, override this function. That's why
+    // it is safe to assume that we are dealing with a block of 16 channels
+    // i.e., EU like implementations. So rather than dynamically allocating
+    // memory we chose to use a magic number of 16
+    uint8_t enabled_channels[16];
+
+    memset(enabled_channels, 0xFF, sizeof(uint8_t)*16);
 
     lorawan_time_t next_tx_delay = 0;
     band_t *band_table = (band_t *) phy_params.bands.table;
@@ -1248,14 +1258,12 @@ bool LoRaPHY::set_next_channel(channel_selection_params_t* params,
         // We found a valid channel
         *channel = enabled_channels[get_random(0, channel_count - 1)];
         *time = 0;
-        delete[] enabled_channels;
         return true;
     }
 
     if (delay_tx > 0) {
         // Delay transmission due to AggregatedTimeOff or to a band time off
         *time = next_tx_delay;
-        delete[] enabled_channels;
         return true;
     }
 
@@ -1264,9 +1272,7 @@ bool LoRaPHY::set_next_channel(channel_selection_params_t* params,
                       phy_params.channels.default_mask_list,
                       phy_params.channels.mask_list_size);
     *time = 0;
-    delete[] enabled_channels;
     return false;
-
 }
 
 lorawan_status_t LoRaPHY::add_channel(channel_params_t* new_channel, uint8_t id)
