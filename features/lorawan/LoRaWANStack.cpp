@@ -676,11 +676,11 @@ int16_t LoRaWANStack::handle_tx(uint8_t port, const uint8_t* data,
 
     tr_info("RTS = %u bytes, PEND = %u", _tx_msg.f_buffer_size, _tx_msg.pending_size);
     set_device_state(DEVICE_STATE_SEND);
-    lora_state_machine();
+    status = lora_state_machine();
 
     // send user the length of data which is scheduled now.
     // user should take care of the pending data.
-    return _tx_msg.f_buffer_size;
+    return (status == LORAWAN_STATUS_OK) ? _tx_msg.f_buffer_size : status;
 }
 
 int16_t LoRaWANStack::handle_rx(const uint8_t port, uint8_t* data,
@@ -782,6 +782,8 @@ lorawan_status_t LoRaWANStack::mlme_request_handler(loramac_mlme_req_t *mlme_req
 void LoRaWANStack::mlme_confirm_handler(loramac_mlme_confirm_t *mlme_confirm)
 {
     if (NULL == mlme_confirm) {
+        tr_error("mlme_confirm: struct [in] is null!");
+        MBED_ASSERT(0);
         return;
     }
 
@@ -790,11 +792,15 @@ void LoRaWANStack::mlme_confirm_handler(loramac_mlme_confirm_t *mlme_confirm)
             if (mlme_confirm->status == LORAMAC_EVENT_INFO_STATUS_OK) {
                 // Status is OK, node has joined the network
                 set_device_state(DEVICE_STATE_JOINED);
-                lora_state_machine();
+                if (lora_state_machine() != LORAWAN_STATUS_OK) {
+                    tr_error("Lora state machine did not return LORAWAN_STATUS_OK");
+                }
             } else {
                 // Join attempt failed.
                 set_device_state(DEVICE_STATE_IDLE);
-                lora_state_machine();
+                if (lora_state_machine() != LORAWAN_STATUS_IDLE) {
+                    tr_error("Lora state machine did not return DEVICE_STATE_IDLE !");
+                }
 
                 if (_callbacks.events) {
                     const int ret = _queue->call(_callbacks.events, JOIN_FAILURE);
@@ -848,7 +854,8 @@ lorawan_status_t LoRaWANStack::mcps_request_handler(loramac_mcps_req_t *mcps_req
 void LoRaWANStack::mcps_confirm_handler(loramac_mcps_confirm_t *mcps_confirm)
 {
     if (mcps_confirm == NULL) {
-        tr_error("mcps_confirm: struct [in] is null.");
+        tr_error("mcps_confirm: struct [in] is null!");
+        MBED_ASSERT(0);
         return;
     }
 
@@ -1147,7 +1154,6 @@ lorawan_status_t LoRaWANStack::mib_set_request(loramac_mib_req_confirm_t *mib_se
     if (NULL == mib_set_params) {
         return LORAWAN_STATUS_PARAMETER_INVALID;
     }
-
     return _loramac.LoRaMacMibSetRequestConfirm(mib_set_params);
 }
 
@@ -1156,10 +1162,7 @@ lorawan_status_t LoRaWANStack::mib_get_request(loramac_mib_req_confirm_t *mib_ge
     if(NULL == mib_get_params) {
         return LORAWAN_STATUS_PARAMETER_INVALID;
     }
-
     return _loramac.LoRaMacMibGetRequestConfirm(mib_get_params);
-
-
 }
 
 lorawan_status_t LoRaWANStack::set_link_check_request()
@@ -1175,10 +1178,10 @@ lorawan_status_t LoRaWANStack::set_link_check_request()
     return mlme_request_handler(&mlme_req);
 }
 
-void LoRaWANStack::shutdown()
+lorawan_status_t LoRaWANStack::shutdown()
 {
     set_device_state(DEVICE_STATE_SHUTDOWN);
-    lora_state_machine();
+    return lora_state_machine();
 }
 
 lorawan_status_t LoRaWANStack::lora_state_machine()
@@ -1269,6 +1272,7 @@ lorawan_status_t LoRaWANStack::lora_state_machine()
                 MBED_ASSERT(ret != 0);
                 (void)ret;
             }
+            status = LORAWAN_STATUS_OK;
             break;
         case DEVICE_STATE_ABP_CONNECTING:
             /*
