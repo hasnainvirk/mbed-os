@@ -39,8 +39,10 @@ SPDX-License-Identifier: BSD-3-Clause
 
 
 LoRaPHY::LoRaPHY(LoRaWANTimeHandler &lora_time)
-    : _lora_time(lora_time)
+    : _radio(NULL),
+      _lora_time(lora_time)
 {
+    memset(&phy_params, 0, sizeof(phy_params));
 }
 
 LoRaPHY::~LoRaPHY()
@@ -1206,6 +1208,7 @@ bool LoRaPHY::set_next_channel(channel_selection_params_t* params,
     uint8_t delay_tx = 0;
 
     uint8_t *enabled_channels = new uint8_t[phy_params.max_channel_cnt];
+    memset(enabled_channels, 0xFF, sizeof(uint8_t)*phy_params.max_channel_cnt);
     MBED_ASSERT(enabled_channels);
 
     lorawan_time_t next_tx_delay = 0;

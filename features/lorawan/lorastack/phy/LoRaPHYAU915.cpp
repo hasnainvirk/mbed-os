@@ -251,6 +251,9 @@ LoRaPHYAU915::LoRaPHYAU915(LoRaWANTimeHandler &lora_time)
     default_channel_masks[3] = 0xFFFF;
     default_channel_masks[4] = 0x00FF;
 
+    memset(channel_masks, 0, sizeof(channel_masks));
+    memset(current_channel_masks, 0, sizeof(current_channel_masks));
+
     // Copy channels default mask
     copy_channel_mask(channel_masks, default_channel_masks, AU915_CHANNELS_MASK_SIZE);
 
