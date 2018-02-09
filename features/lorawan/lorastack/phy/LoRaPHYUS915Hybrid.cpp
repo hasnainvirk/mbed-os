@@ -237,6 +237,9 @@ LoRaPHYUS915Hybrid::LoRaPHYUS915Hybrid(LoRaWANTimeHandler &lora_time)
     default_channel_masks[3] = 0x0000;
     default_channel_masks[4] = 0x0001;
 
+    memset(channel_masks, 0, sizeof(channel_masks));
+    memset(current_channel_masks, 0, sizeof(current_channel_masks));
+
     // Copy channels default mask
     copy_channel_mask(channel_masks, default_channel_masks, US915_HYBRID_CHANNELS_MASK_SIZE);
 
