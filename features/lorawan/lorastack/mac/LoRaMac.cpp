@@ -638,9 +638,11 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                                 }
 
                                 // Decode frame payload MAC commands
-                                mac_commands.ProcessMacCommands( _params.payload, 0, frameLen, snr,
-                                                                 mlme.get_confirmation(),
-                                                                 _params.sys_params, *lora_phy );
+                                if (mac_commands.ProcessMacCommands( _params.payload, 0, frameLen, snr,
+                                                                     mlme.get_confirmation(),
+                                                                     _params.sys_params, *lora_phy ) != LORAWAN_STATUS_OK ) {
+                                    mcps.get_indication().status = LORAMAC_EVENT_INFO_STATUS_ERROR;
+                                }
                             }
                             else
                             {
@@ -652,9 +654,11 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                             if( fCtrl.bits.fopts_len > 0 )
                             {
                                 // Decode Options field MAC commands. Omit the fPort.
-                                mac_commands.ProcessMacCommands( payload, 8, appPayloadStartIndex - 1, snr,
-                                                                 mlme.get_confirmation(),
-                                                                 _params.sys_params, *lora_phy );
+                                if (mac_commands.ProcessMacCommands( payload, 8, appPayloadStartIndex - 1, snr,
+                                                                     mlme.get_confirmation(),
+                                                                     _params.sys_params, *lora_phy ) != LORAWAN_STATUS_OK ) {
+                                    mcps.get_indication().status = LORAMAC_EVENT_INFO_STATUS_ERROR;
+                                }
                             }
 
                             if (0 != LoRaMacPayloadDecrypt( payload + appPayloadStartIndex,
@@ -680,9 +684,11 @@ void LoRaMac::OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8
                         if( fCtrl.bits.fopts_len > 0 )
                         {
                             // Decode Options field MAC commands
-                            mac_commands.ProcessMacCommands( payload, 8, appPayloadStartIndex, snr,
-                                                             mlme.get_confirmation(),
-                                                             _params.sys_params, *lora_phy );
+                            if (mac_commands.ProcessMacCommands( payload, 8, appPayloadStartIndex, snr,
+                                                                 mlme.get_confirmation(),
+                                                                 _params.sys_params, *lora_phy ) != LORAWAN_STATUS_OK ) {
+                                mcps.get_indication().status = LORAMAC_EVENT_INFO_STATUS_ERROR;
+                            }
                         }
                     }
 
@@ -1072,6 +1078,8 @@ void LoRaMac::OnTxDelayedTimerEvent( void )
     loramac_frame_ctrl_t fCtrl;
     AlternateDrParams_t altDr;
 
+    lorawan_status_t status = LORAWAN_STATUS_OK;
+
     _lora_time.TimerStop( _params.timers.tx_delayed_timer );
     _params.mac_state &= ~LORAMAC_TX_DELAYED;
 
@@ -1091,10 +1099,14 @@ void LoRaMac::OnTxDelayedTimerEvent( void )
         /* In case of join request retransmissions, the stack must prepare
          * the frame again, because the network server keeps track of the random
          * LoRaMacDevNonce values to prevent reply attacks. */
-        PrepareFrame( &macHdr, &fCtrl, 0, NULL, 0 );
+        status = PrepareFrame( &macHdr, &fCtrl, 0, NULL, 0 );
     }
 
-    ScheduleTx( );
+    if (status == LORAWAN_STATUS_OK) {
+        ScheduleTx( );
+    } else {
+        tr_error("Delayed TX: PrepareFrame returned error %d", status);
+    }
 }
 
 void LoRaMac::OnRxWindow1TimerEvent( void )
