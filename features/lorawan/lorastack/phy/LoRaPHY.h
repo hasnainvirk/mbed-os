@@ -190,8 +190,6 @@ public:
 
     /** Configure radio reception.
      *
-     * @overridden by AU915
-     *
      * @param [in] config    A pointer to the RX configuration.
      *
      * @param [out] datarate The datarate index set.
@@ -329,8 +327,6 @@ public:
 
     /** Searches and sets the next available channel.
      *
-     * @overridden by - AS923
-     *
      * If there are multiple channels found available, one of them is selected
      * randomly.
      *
@@ -372,20 +368,18 @@ public:
 
     /** Puts the radio into continuous wave mode.
      *
-     * @param [in] continuousWave A pointer to the function parameters.
+     * @param [in] continuous_wave   A pointer to the function parameters.
+     *
+     * @param [in] frequency         Frequency to transmit at
      */
-    virtual void set_tx_cont_mode(cw_mode_params_t* continuousWave,
+    virtual void set_tx_cont_mode(cw_mode_params_t* continuous_wave,
                                   uint32_t frequency = 0);
 
     /** Computes new data rate according to the given offset
      *
-     * @overridden by - AS923
-     * @param [in] downlinkDwellTime The downlink dwell time configuration.
-     *                               0: No limit, 1: 400ms
-     *
      * @param [in] dr The current datarate.
      *
-     * @param [in] drOffset The offset to be applied.
+     * @param [in] dr_offset The offset to be applied.
      *
      * @return     The computed datarate.
      */
