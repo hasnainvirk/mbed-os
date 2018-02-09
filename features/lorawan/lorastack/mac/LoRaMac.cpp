@@ -117,6 +117,7 @@ LoRaMac::LoRaMac(LoRaWANTimeHandler &lora_time)
     _params.sys_params.max_duty_cycle = 0;
 
     LoRaMacPrimitives = NULL;
+    ev_queue = NULL;
 }
 
 LoRaMac::~LoRaMac()
