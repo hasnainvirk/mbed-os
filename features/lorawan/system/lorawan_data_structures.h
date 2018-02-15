@@ -1,24 +1,27 @@
 /**
- * @file lorawan_data_structures.h
- *
- * @brief Contains common data structures used by Mbed-OS
- *        LoRaWAN mplementation.
- *
- * Copyright (c) 2017, Arm Limited and affiliates.
- * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+ / _____)             _              | |
+( (____  _____ ____ _| |_ _____  ____| |__
+ \____ \| ___ |    (_   _) ___ |/ ___)  _ \
+ _____) ) ____| | | || |_| ____( (___| | | |
+(______/|_____)_|_|_| \__)_____)\____)_| |_|
+    (C)2013 Semtech
+ ___ _____ _   ___ _  _____ ___  ___  ___ ___
+/ __|_   _/_\ / __| |/ / __/ _ \| _ \/ __| __|
+\__ \ | |/ _ \ (__| ' <| _| (_) |   / (__| _|
+|___/ |_/_/ \_\___|_|\_\_| \___/|_|_\\___|___|
+embedded.connectivity.solutions===============
+
+Description: LoRaWAN stack layer that controls both MAC and PHY underneath
+
+License: Revised BSD License, see LICENSE.TXT file include in the project
+
+Maintainer: Miguel Luis ( Semtech ), Gregory Cristian ( Semtech ) and Daniel Jaeckle ( STACKFORCE )
+
+
+Copyright (c) 2017, Arm Limited and affiliates.
+
+SPDX-License-Identifier: BSD-3-Clause
+*/
 
 #ifndef LORAWAN_SYSTEM_LORAWAN_DATA_STRUCTURES_H_
 #define LORAWAN_SYSTEM_LORAWAN_DATA_STRUCTURES_H_
@@ -43,21 +46,6 @@ typedef uint32_t lorawan_time_t;
 #define MSG_CONFIRMED_FLAG                    0x02
 #define MSG_MULTICAST_FLAG                    0x04
 #define MSG_PROPRIETARY_FLAG                  0x08
-
-/**
- * A macro to test a if a bit is on in a channel mask or not.
- */
-//#define MASK_BIT_TEST(mask, bit)    (mask & (1U << bit))
-//#define MASK_BIT_TEST(mask, bit)    ((mask)[(bit) / 16] & (1U << ((bit) % 16)))
-/**
- * A macro to clear a bit in a channel mask.
- */
-//#define MASK_BIT_CLEAR(mask, bit)   (mask &= ~(1 << bit))
-
-/**
- * A macro to clear a bit in a channel mask.
- */
-//#define MASK_BIT_SET(mask, bit)   (mask |= (1 << bit))
 
 /**
  * Bit mask for message flags
