@@ -121,6 +121,10 @@ lorawan_status_t LoRaWANStack::initialize_mac_layer(EventQueue *queue)
 
 lorawan_status_t LoRaWANStack::set_lora_callbacks(const lorawan_app_callbacks_t *callbacks)
 {
+    if (DEVICE_STATE_NOT_INITIALIZED == _device_current_state) {
+        return LORAWAN_STATUS_NOT_INITIALIZED;
+    }
+
     if (!callbacks || !callbacks->events) {
         return LORAWAN_STATUS_PARAMETER_INVALID;
     }
@@ -142,7 +146,6 @@ lorawan_status_t LoRaWANStack::set_lora_callbacks(const lorawan_app_callbacks_t 
 lorawan_status_t LoRaWANStack::connect()
 {
     if (DEVICE_STATE_NOT_INITIALIZED == _device_current_state) {
-        tr_error("Stack not initialized!");
         return LORAWAN_STATUS_NOT_INITIALIZED;
     }
 
@@ -158,7 +161,6 @@ lorawan_status_t LoRaWANStack::connect()
 lorawan_status_t LoRaWANStack::connect(const lorawan_connect_t &connect)
 {
     if (DEVICE_STATE_NOT_INITIALIZED == _device_current_state) {
-        tr_error("Stack not initialized!");
         return LORAWAN_STATUS_NOT_INITIALIZED;
     }
 
@@ -181,7 +183,6 @@ lorawan_status_t LoRaWANStack::connect(const lorawan_connect_t &connect)
 lorawan_status_t LoRaWANStack::add_channels(const lorawan_channelplan_t &channel_plan)
 {
     if (_device_current_state == DEVICE_STATE_NOT_INITIALIZED) {
-        tr_error("Stack not initialized!");
         return LORAWAN_STATUS_NOT_INITIALIZED;
     }
 
@@ -191,7 +192,6 @@ lorawan_status_t LoRaWANStack::add_channels(const lorawan_channelplan_t &channel
 lorawan_status_t LoRaWANStack::remove_a_channel(uint8_t channel_id)
 {
     if (_device_current_state == DEVICE_STATE_NOT_INITIALIZED) {
-        tr_error("Stack not initialized!");
         return LORAWAN_STATUS_NOT_INITIALIZED;
     }
 
@@ -201,7 +201,6 @@ lorawan_status_t LoRaWANStack::remove_a_channel(uint8_t channel_id)
 lorawan_status_t LoRaWANStack::drop_channel_list()
 {
     if (_device_current_state == DEVICE_STATE_NOT_INITIALIZED) {
-        tr_error("Stack not initialized!");
         return LORAWAN_STATUS_NOT_INITIALIZED;
     }
 
@@ -211,7 +210,6 @@ lorawan_status_t LoRaWANStack::drop_channel_list()
 lorawan_status_t LoRaWANStack::get_enabled_channels(lorawan_channelplan_t &channel_plan)
 {
     if (_device_current_state == DEVICE_STATE_NOT_INITIALIZED) {
-        tr_error("Stack not initialized!");
         return LORAWAN_STATUS_NOT_INITIALIZED;
     }
 
@@ -220,6 +218,10 @@ lorawan_status_t LoRaWANStack::get_enabled_channels(lorawan_channelplan_t &chann
 
 lorawan_status_t LoRaWANStack::set_confirmed_msg_retry(uint8_t count)
 {
+    if (_device_current_state == DEVICE_STATE_NOT_INITIALIZED) {
+        return LORAWAN_STATUS_NOT_INITIALIZED;
+    }
+
     if (count >= MAX_CONFIRMED_MSG_RETRIES) {
         return LORAWAN_STATUS_PARAMETER_INVALID;
     }
@@ -231,9 +233,7 @@ lorawan_status_t LoRaWANStack::set_confirmed_msg_retry(uint8_t count)
 
 lorawan_status_t LoRaWANStack::set_channel_data_rate(uint8_t data_rate)
 {
-    if (DEVICE_STATE_NOT_INITIALIZED == _device_current_state)
-    {
-        tr_error("Stack not initialized!");
+    if (DEVICE_STATE_NOT_INITIALIZED == _device_current_state) {
         return LORAWAN_STATUS_NOT_INITIALIZED;
     }
 
@@ -243,11 +243,10 @@ lorawan_status_t LoRaWANStack::set_channel_data_rate(uint8_t data_rate)
 
 lorawan_status_t LoRaWANStack::enable_adaptive_datarate(bool adr_enabled)
 {
-    if (_device_current_state == DEVICE_STATE_NOT_INITIALIZED)
-    {
-        tr_error("Stack not initialized!");
+    if (_device_current_state == DEVICE_STATE_NOT_INITIALIZED) {
         return LORAWAN_STATUS_NOT_INITIALIZED;
     }
+
     _loramac.enable_adaptive_datarate(adr_enabled);
     return LORAWAN_STATUS_OK;
 }
@@ -419,6 +418,10 @@ void LoRaWANStack::remove_link_check_request()
 
 lorawan_status_t LoRaWANStack::shutdown()
 {
+    if (DEVICE_STATE_NOT_INITIALIZED == _device_current_state) {
+        return LORAWAN_STATUS_NOT_INITIALIZED;
+    }
+
     return state_controller(DEVICE_STATE_SHUTDOWN);
 }
 
