@@ -296,7 +296,7 @@ typedef union {
     /**
      * Byte-access to the bits.
      */
-    int8_t value;
+    uint8_t value;
     /**
      * The structure to store the minimum and the maximum datarate.
      */
@@ -309,7 +309,7 @@ typedef union {
          * The allowed ranges are region-specific.
          * Please refer to \ref DR_0 to \ref DR_15 for details.
          */
-        int8_t min : 4;
+        uint8_t min : 4;
         /**
          * The maximum data rate.
          *
@@ -318,7 +318,7 @@ typedef union {
          * The allowed ranges are region-specific.
          * Please refer to \ref DR_0 to \ref DR_15 for details.
          */
-        int8_t max : 4;
+        uint8_t max : 4;
     } fields;
 } dr_range_t;
 
