@@ -307,6 +307,30 @@ public:
     void setup_link_check_request();
 
     /**
+     * @brief setup_reset_indication Adds reset indication command
+     * to be put on next uplink message
+     */
+    void setup_reset_indication();
+
+    /**
+     * @brief setup_rekey_indication Adds rekey indication command
+     * to be put on next uplink message
+     */
+    void setup_rekey_indication();
+
+    /**
+     * @brief setup_device_mode_indication Adds Device mode indication command
+     * to be put on next uplink message
+     */
+    void setup_device_mode_indication(uint8_t classType);
+
+    /**
+     * @brief get_server_type Gets the server's type (Supported LoRaWAN spec version)
+     * @return Server type
+     */
+    server_type_t get_server_type();
+
+    /**
      * @brief prepare_join prepares arguments to be ready for join() call.
      * @param params Join parameters to use, if NULL, the default will be used.
      * @param is_otaa True if joining is to be done using OTAA, false for ABP.
@@ -323,6 +347,13 @@ public:
     lorawan_status_t join(bool is_otaa);
 
     /**
+     * @brief rejoin Rejoins the network
+     * @param rejoin_type Rejoin type indicates the rejoin message payload
+     * @return LORAWAN_STATUS_OK or a negative error code on failure.
+     */
+    lorawan_status_t rejoin(join_req_type_t rejoin_type);
+
+    /**
      * MAC operations upon successful transmission
      */
     void on_radio_tx_done(lorawan_time_t timestamp);
@@ -331,7 +362,8 @@ public:
      * MAC operations upon reception
      */
     void on_radio_rx_done(const uint8_t *const payload, uint16_t size,
-                          int16_t rssi, int8_t snr);
+                          int16_t rssi, int8_t snr,
+                          mbed::Callback<void(loramac_mlme_confirm_t&)> confirm_handler);
 
     /**
      * MAC operations upon transmission timeout
@@ -375,7 +407,6 @@ public:
      */
     void post_process_mcps_req(void);
     void post_process_mcps_ind(void);
-    void post_process_mlme_request(void);
     void post_process_mlme_ind(void);
 
     /**
@@ -403,6 +434,8 @@ public:
      * Gets the current receive slot
      */
     rx_slot_t get_current_slot(void);
+
+    uint8_t get_current_adr_ack_limit();
 
     /**
      * These locks trample through to the upper layers and make
@@ -457,13 +490,14 @@ private:
     /**
      * Handles a Join Accept frame
      */
-    void handle_join_accept_frame(const uint8_t *payload, uint16_t size);
+    loramac_event_info_status_t handle_join_accept_frame(const uint8_t *payload, uint16_t size);
 
     /**
      * Handles data frames
      */
     void handle_data_frame(const uint8_t *payload,  uint16_t size, uint8_t ptr_pos,
-                           uint8_t msg_type, int16_t rssi, int8_t snr);
+                           uint8_t msg_type, int16_t rssi, int8_t snr,
+                           mbed::Callback<void(loramac_mlme_confirm_t&)> confirm_handler);
 
     /**
      * Send a Join Request
@@ -484,7 +518,7 @@ private:
      * Performs MIC
      */
     bool message_integrity_check(const uint8_t *payload, uint16_t size,
-                                 uint8_t *ptr_pos, uint32_t address,
+                                 uint8_t *ptr_pos, uint16_t confFCnt, uint32_t address,
                                  uint32_t *downlink_counter, const uint8_t *nwk_skey);
 
     /**
@@ -495,12 +529,15 @@ private:
                                        uint8_t fopts_len, uint8_t *nwk_skey,
                                        uint8_t *app_skey, uint32_t address,
                                        uint32_t downlink_frame_counter,
-                                       int16_t rssi, int8_t snr);
+                                       int16_t rssi, int8_t snr,
+                                       mbed::Callback<void(loramac_mlme_confirm_t&)> confirm_handler);
     /**
      * Decrypts and extracts MAC commands from the received encrypted
      * payload if there is no data
+     * @return True if successful, false otherwise
      */
-    void extract_mac_commands_only(const uint8_t *payload, int8_t snr, uint8_t fopts_len);
+    bool extract_mac_commands_only(const uint8_t *payload, int8_t snr, uint8_t fopts_len,
+                                   mbed::Callback<void(loramac_mlme_confirm_t&)> confirm_handler);
 
     /**
      * Callback function to be executed when the DC backoff timer expires
@@ -672,136 +709,6 @@ private:
     bool _continuous_rx2_window_open;
 
     device_class_t _device_class;
-
-#if defined(LORAWAN_COMPLIANCE_TEST)
-public: // Test interface
-
-    /**
-     * @brief   Set forth an MLME request.
-     *
-     * @details The MAC layer management entity handles the management services.
-     *
-     * @param [in] request    The MLME request to perform.
-     *                        Refer to \ref loramac_mlme_req_t.
-     *
-     * @return  `lorawan_status_t` The status of the operation. The possible values are:
-     *          \ref LORAWAN_STATUS_OK
-     *          \ref LORAWAN_STATUS_BUSY
-     *          \ref LORAWAN_STATUS_SERVICE_UNKNOWN
-     *          \ref LORAWAN_STATUS_PARAMETER_INVALID
-     *          \ref LORAWAN_STATUS_NO_NETWORK_JOINED
-     *          \ref LORAWAN_STATUS_LENGTH_ERROR
-     *          \ref LORAWAN_STATUS_DEVICE_OFF
-     */
-    lorawan_status_t mlme_request(loramac_mlme_req_t *request);
-
-    /**
-     * @brief   Set forth an MCPS request.
-     *
-     * @details The MAC Common Part Sublayer handles the data services. The following
-     *          code-snippet shows how to use the API to send an unconfirmed
-     *          LoRaMAC frame.
-     *
-     * @code
-     *
-     * uint8_t buffer[] = {1, 2, 3};
-     *
-     * loramac_compliance_test_req_t request;
-     * request.type = MCPS_UNCONFIRMED;
-     * request.fport = 1;
-     * request.f_buffer = buffer;
-     * request.f_buffer_size = sizeof(buffer);
-     *
-     * if (test_request(&request) == LORAWAN_STATUS_OK) {
-     *   // Service started successfully. Waiting for the MCPS-Confirm event
-     * }
-     *
-     * @endcode
-     *
-     * @param [in] request    The test request to perform.
-     *                        Refer to \ref loramac_compliance_test_req_t.
-     *
-     * @return  `lorawan_status_t` The status of the operation. The possible values are:
-     *          \ref LORAWAN_STATUS_OK
-     *          \ref LORAWAN_STATUS_BUSY
-     *          \ref LORAWAN_STATUS_SERVICE_UNKNOWN
-     *          \ref LORAWAN_STATUS_PARAMETER_INVALID
-     *          \ref LORAWAN_STATUS_NO_NETWORK_JOINED
-     *          \ref LORAWAN_STATUS_LENGTH_ERROR
-     *          \ref LORAWAN_STATUS_DEVICE_OFF
-     */
-    lorawan_status_t test_request(loramac_compliance_test_req_t *request);
-
-    /**
-     * \brief   LoRaMAC set tx timer.
-     *
-     * \details Sets up a timer for next transmission (application specific timers).
-     *
-     * \param   [in] NextTxTime - Periodic time for next uplink.
-
-     * \retval  `lorawan_status_t` The status of the operation. The possible values are:
-     *          \ref LORAWAN_STATUS_OK
-     *          \ref LORAWAN_STATUS_PARAMETER_INVALID
-     */
-    lorawan_status_t LoRaMacSetTxTimer(uint32_t NextTxTime);
-
-    /**
-     * \brief   LoRaMAC stop tx timer.
-     *
-     * \details Stops the next tx timer.
-     *
-     * \retval  `lorawan_status_t` The status of the operation. The possible values are:
-     *          \ref LORAWAN_STATUS_OK
-     *          \ref LORAWAN_STATUS_PARAMETER_INVALID
-     */
-    lorawan_status_t LoRaMacStopTxTimer();
-
-    /**
-     * \brief   Enabled or disables the reception windows
-     *
-     * \details This is a test function. It shall be used for testing purposes only.
-     *          Changing this attribute may lead to a non-conformance LoRaMac operation.
-     *
-     * \param   [in] enable - Enabled or disables the reception windows
-     */
-    void LoRaMacTestRxWindowsOn(bool enable);
-
-    /**
-     * \brief   Enables the MIC field test
-     *
-     * \details This is a test function. It shall be used for testing purposes only.
-     *          Changing this attribute may lead to a non-conformance LoRaMac operation.
-     *
-     * \param   [in] txPacketCounter - Fixed Tx packet counter value
-     */
-    void LoRaMacTestSetMic(uint16_t txPacketCounter);
-
-    /**
-     * \brief   Enabled or disables the duty cycle
-     *
-     * \details This is a test function. It shall be used for testing purposes only.
-     *          Changing this attribute may lead to a non-conformance LoRaMac operation.
-     *
-     * \param   [in] enable - Enabled or disables the duty cycle
-     */
-    void LoRaMacTestSetDutyCycleOn(bool enable);
-
-    /**
-     * \brief   Sets the channel index
-     *
-     * \details This is a test function. It shall be used for testing purposes only.
-     *          Changing this attribute may lead to a non-conformance LoRaMac operation.
-     *
-     * \param   [in] channel - Channel index
-     */
-    void LoRaMacTestSetChannel(uint8_t channel);
-
-private:
-    /**
-     * Timer to handle the application data transmission duty cycle
-     */
-    timer_event_t tx_next_packet_timer;
-#endif
 };
 
 #endif // MBED_LORAWAN_MAC_H__

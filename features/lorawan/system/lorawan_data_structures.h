@@ -154,6 +154,18 @@ typedef enum {
     RX_SLOT_WIN_PING_SLOT
 } rx_slot_t;
 
+typedef enum {
+    REJOIN_REQUEST_TYPE0 = 0,
+    REJOIN_REQUEST_TYPE1 = 1,
+    REJOIN_REQUEST_TYPE2 = 2,
+    JOIN_REQUEST = 0xFF
+} join_req_type_t;
+
+typedef enum {
+    LW1_0_2,
+    LW1_1
+} server_type_t;
+
 /*!
  * The global MAC layer parameters.
  */
@@ -288,9 +300,9 @@ typedef enum {
      */
     FRAME_TYPE_DATA_CONFIRMED_DOWN   = 0x05,
     /*!
-     * LoRaMAC RFU frame.
+     * LoRaMAC Rejoin request frame.
      */
-    FRAME_TYPE_RFU                   = 0x06,
+    FRAME_TYPE_REJOIN_REQUEST        = 0x06,
     /*!
      * LoRaMAC proprietary frame.
      */
@@ -303,6 +315,10 @@ typedef enum {
  * LoRaWAN Specification V1.0.2, chapter 5, table 4.
  */
 typedef enum {
+    /*!
+     * ResetInd
+     */
+    MOTE_MAC_RESET_IND               = 0x01,
     /*!
      * LinkCheckReq
      */
@@ -338,7 +354,27 @@ typedef enum {
     /*!
      * DlChannelAns
      */
-    MOTE_MAC_DL_CHANNEL_ANS          = 0x0A
+    MOTE_MAC_DL_CHANNEL_ANS          = 0x0A,
+    /*!
+     * RekeyInd
+     */
+    MOTE_MAC_REKEY_IND               = 0x0B,
+    /*!
+     * ADRParamSetupAns
+     */
+    MOTE_MAC_ADR_PARAM_SETUP_ANS     = 0x0C,
+    /*!
+     * DeviceTimeReq
+     */
+    MOTE_MAC_DEVICE_TIME_REQ         = 0x0D,
+    /*!
+     * RejoinParamSetupAns
+     */
+    MOTE_MAC_REJOIN_PARAM_SETUP_ANS  = 0x0F,
+    /*!
+     * DeviceModeInd
+     */
+    MOTE_DEVICE_MODE_IND             = 0x20
 } mote_mac_cmds_t;
 
 /*!
@@ -347,6 +383,10 @@ typedef enum {
  * LoRaWAN Specification V1.0.2 chapter 5, table 4.
  */
 typedef enum {
+    /*!
+     * ResetConf
+     */
+    SRV_MAC_RESET_CONF               = 0x01,
     /*!
      * LinkCheckAns
      */
@@ -383,6 +423,30 @@ typedef enum {
      * DlChannelReq
      */
     SRV_MAC_DL_CHANNEL_REQ           = 0x0A,
+    /*!
+     * RekeyConf
+     */
+    SRV_MAC_REKEY_CONF               = 0x0B,
+    /*!
+     * ADRParamSetupReq
+     */
+    SRV_MAC_ADR_PARAM_SETUP_REQ      = 0x0C,
+    /*!
+     * DeviceTimeAns
+     */
+    SRV_MAC_DEVICE_TIME_ANS          = 0x0D,
+    /*!
+     * ForceRejoinReq
+     */
+    SRV_MAC_FORCE_REJOIN_REQ         = 0x0E,
+    /*!
+     * RejoinParamSetupReq
+     */
+    SRV_MAC_REJOIN_PARAM_SETUP_REQ   = 0x0F,
+    /*!
+     * DeviceModeConf
+     */
+    SRV_MAC_DEVICE_MODE_CONF          = 0x20
 } server_mac_cmds_t;
 
 /*!
@@ -691,9 +755,7 @@ typedef struct {
  *
  * Name                         | Request | Indication | Response | Confirm
  * ---------------------------- | :-----: | :--------: | :------: | :-----:
- * \ref MLME_JOIN               | YES     | NO         | NO       | YES
  * \ref MLME_LINK_CHECK         | YES     | NO         | NO       | YES
- * \ref MLME_TXCW               | YES     | NO         | NO       | YES
  * \ref MLME_SCHEDULE_UPLINK    | NO      | YES        | NO       | NO
  *
  */
@@ -703,7 +765,13 @@ typedef enum {
      *
      * LoRaWAN Specification V1.0.2, chapter 6.2.
      */
-    MLME_JOIN,
+    MLME_JOIN_ACCEPT,
+    /*!
+     * Initiates Rejoin request
+     *
+     * LoRaWAN specification V1.1, chapter 6.2.4
+     */
+    MLME_REJOIN,
     /*!
      * LinkCheckReq - Connectivity validation.
      *
@@ -711,22 +779,34 @@ typedef enum {
      */
     MLME_LINK_CHECK,
     /*!
-     * Sets TX continuous wave mode.
-     *
-     * LoRaWAN end-device certification.
-     */
-    MLME_TXCW,
-    /*!
-     * Sets TX continuous wave mode (new LoRa-Alliance CC definition).
-     *
-     * LoRaWAN end-device certification.
-     */
-    MLME_TXCW_1,
-    /*!
      * Indicates that the application shall perform an uplink as
      * soon as possible.
      */
-    MLME_SCHEDULE_UPLINK
+    MLME_SCHEDULE_UPLINK,
+
+    /*!
+     * Indicates that ABP device has resetted
+     * LoRaWAN specification V1.1, chapter 5.1
+     */
+    MLME_RESET,
+
+    /*!
+     * Indicates that OTAA device has updated keys
+     * LoRaWAN specification V1.1, chapter 5.10
+     */
+    MLME_REKEY,
+
+    /*!
+     * Indicates that device has changed LoRa class
+     * LoRaWAN specification V1.1, chapter 18.1
+     */
+    MLME_DEVICE_MODE,
+
+    /*!
+     * Indicates that device has received force rejoin MAC command
+     * LoRaWAN specification V1.1, chapter 5.13
+     */
+    MLME_FORCE_REJOIN
 } mlme_type_t;
 
 /*!
@@ -775,28 +855,19 @@ typedef struct {
     uint8_t power;
 } mlme_cw_tx_mode_t;
 
-
 /*!
  * LoRaMAC MLME-Confirm primitive.
  */
 typedef struct {
     /*!
-     * Indicates if a request is pending or not
-     */
-    bool pending;
-    /*!
      * The previously performed MLME-Request. i.e., the request type
      * for which the confirmation is being generated
      */
-    mlme_type_t req_type;
+    mlme_type_t type;
     /*!
      * The status of the operation.
      */
     loramac_event_info_status_t status;
-    /*!
-     * The transmission time on air of the frame.
-     */
-    lorawan_time_t tx_toa;
     /*!
      * The demodulation margin. Contains the link margin [dB] of the last LinkCheckReq
      * successfully received.
@@ -807,9 +878,31 @@ typedef struct {
      */
     uint8_t nb_gateways;
     /*!
-     * The number of retransmissions.
+     * Number of retries done for RejoinRequest
      */
-    uint8_t nb_retries;
+    uint8_t max_retries;
+    /*!
+     * Period between RejoinRequest (2^period + rand(0, 32))
+     */
+    uint8_t period;
+    /*!
+     * A datarate used to send RejoinRequest
+     */
+    uint8_t datarate;
+    /*!
+     * Value 0 or 1 means RejoinRequest type 0 shall be transmitted,
+     * Value 2 means RejoinRequest type 2 shall be transmitted,
+     * Other values are RFU and shall not be processed.
+     */
+    uint8_t rejoin_type;
+    /*!
+     * Class type from device mode conf
+     */
+    uint8_t classType;
+    /*!
+     * LoRaWAN version
+     */
+    uint8_t version;
 } loramac_mlme_confirm_t;
 
 /*!
@@ -838,9 +931,6 @@ typedef enum device_states {
     DEVICE_STATE_SENDING,
     DEVICE_STATE_AWAITING_ACK,
     DEVICE_STATE_STATUS_CHECK,
-#if defined(LORAWAN_COMPLIANCE_TEST)
-    DEVICE_STATE_COMPLIANCE_TEST,
-#endif
     DEVICE_STATE_SHUTDOWN
 } device_states_t;
 
@@ -1041,6 +1131,8 @@ typedef struct {
 
     /*!
      * Application IEEE EUI
+     *
+     * In case of LW1.1 or greater this is same as JoinEUI
      */
     uint8_t *app_eui;
 
@@ -1050,8 +1142,14 @@ typedef struct {
     uint8_t *app_key;
 
     /*!
+     * AES encryption/decryption cipher network key
+     */
+    uint8_t *nwk_key;
+
+    /*!
      * AES encryption/decryption cipher network session key
      * NOTE! LoRaMac determines the length of the key based on sizeof this variable
+     * From LW1.1 onwards, this is used as FNwkSIntKey.
      */
     uint8_t nwk_skey[16];
 
@@ -1060,6 +1158,30 @@ typedef struct {
      * NOTE! LoRaMac determines the length of the key based on sizeof this variable
      */
     uint8_t app_skey[16];
+
+    /*!
+     * AES encryption/decryption cipher Serving network session integrity key
+     * NOTE! LoRaMac determines the length of the key based on sizeof this variable
+     */
+    uint8_t snwk_sintkey[16];
+
+    /*!
+     * AES encryption/decryption cipher network session encryption key
+     * NOTE! LoRaMac determines the length of the key based on sizeof this variable
+     */
+    uint8_t nwk_senckey[16];
+
+    /*!
+     * AES encryption/decryption cipher Join server integrity key
+     * NOTE! LoRaMac determines the length of the key based on sizeof this variable
+     */
+    uint8_t js_intkey[16];
+
+    /*!
+     * AES encryption/decryption cipher Join server encryption key
+     * NOTE! LoRaMac determines the length of the key based on sizeof this variable
+     */
+    uint8_t js_enckey[16];
 
 } loramac_keys;
 
@@ -1227,6 +1349,21 @@ typedef struct {
     uint16_t dev_nonce;
 
     /*!
+     * counterForAck is needed for LoRaWAN 1.1 spec onwards
+     */
+    uint16_t counterForAck;
+
+    /*!
+     * Rejoin type 0 or 2 specific counter
+     */
+    uint16_t RJcount0;
+
+    /*!
+     * Rejoin type 1 specific counter
+     */
+    uint16_t RJcount1;
+
+    /*!
      * Network ID ( 3 bytes )
      */
     uint32_t net_id;
@@ -1243,10 +1380,16 @@ typedef struct {
     uint32_t ul_frame_counter;
 
     /*!
-     * LoRaMAC frame counter. Each time a packet is received the counter is incremented.
+     * LoRaMAC NS frame counter. Each time a packet is received for port 0 the counter is incremented.
      * Only the 16 LSB bits are received
      */
     uint32_t dl_frame_counter;
+
+    /*!
+     * Application Server DL frame_counter. Each time a packet is received to port > 0 this counter is incremented.
+     * Only the 16 LSB bits are received
+     */
+    uint32_t app_dl_frame_counter;
 
     /*!
      * Counts the number of missed ADR acknowledgements
@@ -1277,124 +1420,15 @@ typedef struct {
     rx_config_params_t rx_window1_config;
     rx_config_params_t rx_window2_config;
 
+    join_req_type_t join_request_type;
+
+    server_type_t server_type;
+
     /*!
      * Multicast channels linked list
      */
     multicast_params_t *multicast_channels;
 
 } loramac_protocol_params;
-
-
-#if defined(LORAWAN_COMPLIANCE_TEST)
-
-typedef struct {
-    /*!
-     * MLME-Request type.
-     */
-    mlme_type_t type;
-
-    mlme_cw_tx_mode_t cw_tx_mode;
-} loramac_mlme_req_t;
-
-typedef struct {
-    /*!
-     * Compliance test request
-     */
-    mcps_type_t type;
-
-    /*!
-     * Frame port field. Must be set if the payload is not empty. Use the
-     * application-specific frame port values: [1...223].
-     *
-     * LoRaWAN Specification V1.0.2, chapter 4.3.2.
-     */
-    uint8_t fport;
-
-    /*!
-     * Uplink datarate, if ADR is off.
-     */
-    int8_t data_rate;
-    /*!
-     * The number of trials to transmit the frame, if the LoRaMAC layer did not
-     * receive an acknowledgment. The MAC performs a datarate adaptation
-     * according to the LoRaWAN Specification V1.0.2, chapter 18.4, as in
-     * the following table:
-     *
-     * Transmission nb | Data Rate
-     * ----------------|-----------
-     * 1 (first)       | DR
-     * 2               | DR
-     * 3               | max(DR-1,0)
-     * 4               | max(DR-1,0)
-     * 5               | max(DR-2,0)
-     * 6               | max(DR-2,0)
-     * 7               | max(DR-3,0)
-     * 8               | max(DR-3,0)
-     *
-     * Note that if nb_trials is set to 1 or 2, the MAC will not decrease
-     * the datarate, if the LoRaMAC layer did not receive an acknowledgment.
-     */
-    uint8_t nb_trials;
-
-    /** Payload data
-      *
-      * A pointer to the buffer of the frame payload.
-      */
-    uint8_t f_buffer[LORAMAC_PHY_MAXPAYLOAD];
-
-    /** Payload size
-     *
-     * The size of the frame payload.
-     */
-    uint16_t f_buffer_size;
-
-} loramac_compliance_test_req_t;
-
-/**  LoRaWAN compliance tests support data
- *
- */
-typedef struct compliance_test {
-    /** Is test running
-     *
-     */
-    bool running;
-    /** State of test
-     *
-     */
-    uint8_t state;
-    /** Is TX confirmed
-     *
-     */
-    bool is_tx_confirmed;
-    /** Port used by the application
-     *
-     */
-    uint8_t app_port;
-    /** Maximum size of data used by application
-     *
-     */
-    uint8_t app_data_size;
-    /** Data provided by application
-     *
-     */
-    uint8_t app_data_buffer[MBED_CONF_LORA_TX_MAX_SIZE];
-    /** Downlink counter
-     *
-     */
-    uint16_t downlink_counter;
-    /** Is link check required
-     *
-     */
-    bool link_check;
-    /** Demodulation margin
-     *
-     */
-    uint8_t demod_margin;
-    /** Number of gateways
-     *
-     */
-    uint8_t nb_gateways;
-} compliance_test_t;
-#endif
 
 #endif /* LORAWAN_SYSTEM_LORAWAN_DATA_STRUCTURES_H_ */
