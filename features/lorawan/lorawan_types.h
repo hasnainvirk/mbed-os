@@ -51,6 +51,9 @@
 #define MSG_MULTICAST_FLAG                    0x04
 #define MSG_PROPRIETARY_FLAG                  0x08
 
+#define LORAWAN_VERSION_1_0_2                 0
+#define LORAWAN_VERSION_1_1                   10
+
 /**
  * LoRaWAN device classes definition.
  *
@@ -62,19 +65,19 @@ typedef enum {
      *
      * LoRaWAN Specification V1.0.2, chapter 3.
      */
-    CLASS_A,
+    CLASS_A = 0x00,
     /**
      * LoRaWAN device class B.
      *
      * LoRaWAN Specification V1.0.2, chapter 8.
      */
-    CLASS_B,
+    CLASS_B = 0x01,
     /**
      * LoRaWAN device class C.
      *
      * LoRaWAN Specification V1.0.2, chapter 17.
      */
-    CLASS_C,
+    CLASS_C = 0x02,
 } device_class_t;
 
 /**
@@ -98,7 +101,7 @@ typedef enum lorawan_status {
     LORAWAN_STATUS_CRYPTO_FAIL = -1014,            /**< Service not started - crypto failure */
     LORAWAN_STATUS_PORT_INVALID = -1015,           /**< Invalid port */
     LORAWAN_STATUS_CONNECT_IN_PROGRESS = -1016,    /**< Services started - Connection in progress */
-    LORAWAN_STATUS_NO_ACTIVE_SESSIONS = -1017,            /**< Services not started - No active session */
+    LORAWAN_STATUS_NO_ACTIVE_SESSIONS = -1017,     /**< Services not started - No active session */
     LORAWAN_STATUS_IDLE = -1018,                   /**< Services started - Idle at the moment */
 #if defined(LORAWAN_COMPLIANCE_TEST)
     //Deprecated - will replace the code -1019 with something
@@ -109,7 +112,7 @@ typedef enum lorawan_status {
     LORAWAN_STATUS_NO_CHANNEL_FOUND = -1021,       /**< None of the channels is enabled at the moment*/
     LORAWAN_STATUS_NO_FREE_CHANNEL_FOUND = -1022,  /**< None of the enabled channels is ready for another TX (duty cycle limited)*/
     LORAWAN_STATUS_METADATA_NOT_AVAILABLE = -1023, /**< Meta-data after an RX or TX is stale*/
-    LORAWAN_STATUS_ALREADY_CONNECTED = -1024              /**< The device has already joined a network*/
+    LORAWAN_STATUS_ALREADY_CONNECTED = -1024       /**< The device has already joined a network*/
 } lorawan_status_t;
 
 /** The lorawan_connect_otaa structure.
@@ -126,6 +129,7 @@ typedef struct {
     /** Application identifier
      *
      * LoRaWAN Specification V1.0.2, chapter 6.1.2
+     * In case of LW1.1 or greater this is same as JoinEUI
      */
     uint8_t *app_eui;
     /** AES-128 application key
@@ -133,6 +137,12 @@ typedef struct {
      * LoRaWAN Specification V1.0.2, chapter 6.2.2
      */
     uint8_t *app_key;
+    /** AES-128 network key
+     *
+     * In case of LoRaWAN Specification V1.0.2, must be same as app_key!
+     * LoRaWAN specification 1.1, chapter 6.2.2
+     */
+    uint8_t *nwk_key;
     /** Join request trials
      *
      * Number of trials for the join request.
@@ -159,6 +169,7 @@ typedef struct {
     /** Network session key
      *
      * LoRaWAN Specification V1.0.2, chapter 6.1.3
+     * LoRaWAN Spec V1.1 onwards this is used as FNwkSIntKey
      */
     uint8_t *nwk_skey;
     /** Application session key
@@ -166,6 +177,18 @@ typedef struct {
      * LoRaWAN Specification V1.0.2, chapter 6.1.4
      */
     uint8_t *app_skey;
+
+    /** Serving Network session integrity key
+     *
+     * LoRaWAN Specification V1.1, chapter 6.1.2.3
+     */
+    uint8_t *snwk_sintkey;
+
+    /** Network session encryption key
+     *
+     * LoRaWAN Specification V1.1, chapter 6.1.2.4
+     */
+    uint8_t *nwk_senckey;
 } lorawan_connect_abp_t;
 
 /** lorawan_connect_t structure
@@ -226,6 +249,9 @@ typedef enum lora_events {
     JOIN_FAILURE,
     UPLINK_REQUIRED,
     AUTOMATIC_UPLINK_ERROR,
+    CLASS_CHANGED, //only in Lorawan 1.1 (ch 18.1)
+    SERVER_ACCEPTED_CLASS_IN_USE, //only in Lorawan 1.1 (ch 18.1)
+    SERVER_DOES_NOT_SUPPORT_CLASS_IN_USE //only in Lorawan 1.1 (ch 18.1)
 } lorawan_event_t;
 
 /**
