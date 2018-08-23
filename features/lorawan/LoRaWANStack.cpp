@@ -72,6 +72,12 @@ LoRaWANStack::LoRaWANStack()
       _ctrl_flags(IDLE_FLAG),
       _app_port(INVALID_PORT),
       _link_check_requested(false),
+      _reset_ind_requested(false),
+      _rekey_ind_needed(false),
+      _rekey_ind_counter(0),
+      _device_mode_ind_needed(false),
+      _device_mode_ind_ongoing(false),
+      _new_class_type(CLASS_A),
       _automatic_uplink_ongoing(false),
       _ready_for_rx(true),
       _queue(NULL)
@@ -295,6 +301,25 @@ int16_t LoRaWANStack::handle_tx(const uint8_t port, const uint8_t *data,
 
     if (!null_allowed && !data) {
         return LORAWAN_STATUS_PARAMETER_INVALID;
+    } 
+
+    // ResetInd is only used for ABP devices after connect, until ResetConf is received
+    if (_reset_ind_requested) {
+        set_reset_indication();
+    } else if (_rekey_ind_needed) {
+        if (_rekey_ind_counter < _loramac.get_current_adr_ack_limit()) {
+            set_rekey_indication();
+            _rekey_ind_counter++;
+        } else {
+            //TODO: Check if something else is needed also (reset settings?)
+            _rekey_ind_needed = false;
+            send_event_to_application(JOIN_FAILURE);
+            _device_current_state = DEVICE_STATE_IDLE;
+        }
+    } 
+
+    if (_device_mode_ind_needed) {
+        set_device_mode_indication();
     }
 
     if (!_lw_session.active) {
@@ -429,6 +454,21 @@ lorawan_status_t LoRaWANStack::set_link_check_request()
     return LORAWAN_STATUS_OK;
 }
 
+void LoRaWANStack::set_reset_indication()
+{
+    _loramac.setup_reset_indication();
+}
+
+void LoRaWANStack::set_rekey_indication()
+{
+    _loramac.setup_rekey_indication();
+}
+
+void LoRaWANStack::set_device_mode_indication()
+{
+    _loramac.setup_device_mode_indication(_new_class_type);
+}
+
 void LoRaWANStack::remove_link_check_request()
 {
     _link_check_requested = false;
@@ -452,8 +492,21 @@ lorawan_status_t LoRaWANStack::set_device_class(const device_class_t &device_cla
     if (device_class == CLASS_B) {
         return LORAWAN_STATUS_UNSUPPORTED;
     }
-    _loramac.set_device_class(device_class,
+
+    // Only change the class when needed
+    if (_loramac.get_device_class() != device_class) {
+        if (_loramac.get_server_type() == LW1_1) {
+            _new_class_type = device_class;
+            set_device_mode_indication();
+            _device_mode_ind_needed = true;
+            _device_mode_ind_ongoing = true;
+        } else {
+            _loramac.set_device_class(device_class,
                               mbed::callback(this, &LoRaWANStack::post_process_tx_no_reception));
+        }
+
+    }
+    
     return LORAWAN_STATUS_OK;
 }
 
@@ -565,7 +618,9 @@ void LoRaWANStack::process_transmission_timeout()
     _loramac.on_radio_tx_timeout();
     _ctrl_flags &= ~TX_DONE_FLAG;
     if (_device_current_state == DEVICE_STATE_JOINING) {
-        mlme_confirm_handler();
+        _device_current_state = DEVICE_STATE_IDLE;
+        tr_error("Joining abandoned: Radio failed to transmit");
+        send_event_to_application(TX_TIMEOUT);
     } else {
         state_controller(DEVICE_STATE_STATUS_CHECK);
     }
@@ -576,6 +631,7 @@ void LoRaWANStack::process_transmission_timeout()
 void LoRaWANStack::process_transmission(void)
 {
     tr_debug("Transmission completed");
+    _loramac.on_radio_tx_done(_tx_timestamp);
 
     if (_device_current_state == DEVICE_STATE_JOINING) {
         _device_current_state = DEVICE_STATE_AWAITING_JOIN_ACCEPT;
@@ -589,6 +645,12 @@ void LoRaWANStack::process_transmission(void)
     }
 
     _loramac.on_radio_tx_done(_tx_timestamp);
+    
+    if (_loramac.get_server_type() == LW1_1 && _device_mode_ind_ongoing) {
+        _device_mode_ind_ongoing = false;
+        _loramac.set_device_class(device_class_t(_new_class_type), mbed::callback(this, &LoRaWANStack::post_process_tx_no_reception));
+        send_event_to_application(CLASS_CHANGED);
+    }
 }
 
 void LoRaWANStack::post_process_tx_with_reception()
@@ -699,17 +761,7 @@ void LoRaWANStack::process_reception(const uint8_t *const payload, uint16_t size
     _ctrl_flags &= ~TX_DONE_FLAG;
     _ctrl_flags &= ~RETRY_EXHAUSTED_FLAG;
 
-    _loramac.on_radio_rx_done(payload, size, rssi, snr);
-
-    if (_loramac.get_mlme_confirmation()->pending) {
-        _loramac.post_process_mlme_request();
-        mlme_confirm_handler();
-
-        if (_loramac.get_mlme_confirmation()->req_type == MLME_JOIN) {
-            _ready_for_rx = true;
-            return;
-        }
-    }
+    _loramac.on_radio_rx_done(payload, size, rssi, snr, callback(this, &LoRaWANStack::mlme_confirm_handler));
 
     if (!_loramac.nwk_joined()) {
         _ready_for_rx = true;
@@ -896,6 +948,7 @@ lorawan_status_t LoRaWANStack::handle_connect(bool is_otaa)
         _lw_session.downlink_counter = 0;
         _lw_session.uplink_counter = 0;
         _ctrl_flags |= USING_OTAA_FLAG;
+        //We cannot set _rekey_ind_needed here, because server might not support LW1.1
     } else {
         // If current state is SHUTDOWN, device may be trying to re-establish
         // communication. In case of ABP specification is meddled about frame counters.
@@ -905,6 +958,11 @@ lorawan_status_t LoRaWANStack::handle_connect(bool is_otaa)
         // memory storage.
         //_lw_session.downlink_counter; //Get from NVM
         //_lw_session.uplink_counter; //Get from NVM
+
+        if (MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_1) {
+            _reset_ind_requested = true;
+            //TODO: Switch back to default MAC and radio parameters, but leave counters untouched
+        }
 
         tr_debug("Initiating ABP");
         tr_debug("Frame Counters. UpCnt=%lu, DownCnt=%lu",
@@ -935,27 +993,37 @@ void LoRaWANStack::mlme_indication_handler()
     tr_error("Unknown MLME Indication type.");
 }
 
-void LoRaWANStack::mlme_confirm_handler()
+void LoRaWANStack::mlme_confirm_handler(loramac_mlme_confirm_t& mlme_confirm)
 {
-    if (_loramac.get_mlme_confirmation()->req_type == MLME_LINK_CHECK) {
-        if (_loramac.get_mlme_confirmation()->status
-                == LORAMAC_EVENT_INFO_STATUS_OK) {
-
+    if (mlme_confirm.type == MLME_LINK_CHECK) {
+        if (mlme_confirm.status == LORAMAC_EVENT_INFO_STATUS_OK) {
             if (_callbacks.link_check_resp) {
-                const int ret = _queue->call(
-                        _callbacks.link_check_resp,
-                        _loramac.get_mlme_confirmation()->demod_margin,
-                        _loramac.get_mlme_confirmation()->nb_gateways);
+                const int ret = _queue->call(_callbacks.link_check_resp,
+                                             mlme_confirm.demod_margin,
+                                             mlme_confirm.nb_gateways);
                 MBED_ASSERT(ret != 0);
-                (void) ret;
+                (void)ret;
             }
         }
-    }
-
-    if (_loramac.get_mlme_confirmation()->req_type == MLME_JOIN) {
-
-        switch (_loramac.get_mlme_confirmation()->status) {
+    } else if (mlme_confirm.type == MLME_RESET) {
+        _reset_ind_requested = false;
+    } else if (mlme_confirm.type == MLME_REKEY) {
+        _rekey_ind_needed = false;
+        _rekey_ind_counter = 0;
+    } else if (mlme_confirm.type == MLME_DEVICE_MODE) {
+        _device_mode_ind_needed = false;
+        if (_loramac.get_device_class() == mlme_confirm.classType) {
+            send_event_to_application(SERVER_ACCEPTED_CLASS_IN_USE);
+        } else {
+            send_event_to_application(SERVER_DOES_NOT_SUPPORT_CLASS_IN_USE);
+        }
+    } else if (mlme_confirm.type == MLME_JOIN_ACCEPT) {
+        switch (mlme_confirm.status) {
             case LORAMAC_EVENT_INFO_STATUS_OK:
+                if (_loramac.get_server_type() == LW1_1) {
+                    _rekey_ind_needed = true;
+                    _rekey_ind_counter = 0;
+                }
                 state_controller(DEVICE_STATE_CONNECTED);
                 break;
 
@@ -965,19 +1033,13 @@ void LoRaWANStack::mlme_confirm_handler()
                 tr_error("Joining abandoned: CRYPTO_ERROR");
                 send_event_to_application(CRYPTO_ERROR);
                 break;
-
-            case LORAMAC_EVENT_INFO_STATUS_TX_TIMEOUT:
-                // fatal error
-                _device_current_state = DEVICE_STATE_IDLE;
-                tr_error("Joining abandoned: Radio failed to transmit");
-                send_event_to_application(TX_TIMEOUT);
-                break;
-
             default:
                 // non-fatal, retry if possible
                 _device_current_state = DEVICE_STATE_AWAITING_JOIN_ACCEPT;
                 state_controller(DEVICE_STATE_JOINING);
         }
+    } else if (mlme_confirm.type == MLME_FORCE_REJOIN) {
+        //TODO: handle this
     }
 }
 
