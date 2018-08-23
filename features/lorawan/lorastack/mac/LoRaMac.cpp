@@ -235,6 +235,7 @@ loramac_event_info_status_t LoRaMac::handle_join_accept_frame(const uint8_t *pay
                                              _params.rx_buffer + 1)) {
         return LORAMAC_EVENT_INFO_STATUS_CRYPTO_FAIL;
     }
+    _params.rx_buffer[0] = payload[0];
 
     //Store server type to local so that invalid join accept of rejoin request won't affect the orig. type.
     if ( (((_params.rx_buffer[11] >> 7) & 0x01) == 1) && MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_1) {
@@ -251,7 +252,6 @@ loramac_event_info_status_t LoRaMac::handle_join_accept_frame(const uint8_t *pay
     uint8_t args_size = 0;
     uint8_t args[16];
 
-    _params.rx_buffer[0] = payload[0];
     uint8_t *mic_key = _params.keys.js_intkey; //in case of LW1.0.2 js_intkey == nwk_key == app_key
 
     if (stype == LW1_0_2) {
@@ -2225,7 +2225,6 @@ void LoRaMac::get_rejoin_parameters(uint32_t& max_time, uint32_t& max_count)
     max_time = _lora_phy->get_rejoin_max_time();
     max_count = _lora_phy->get_rejoin_max_count();
 }
-
 uint8_t LoRaMac::get_prev_QOS_level()
 {
    return _prev_qos_level;  
