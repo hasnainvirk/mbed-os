@@ -1442,7 +1442,6 @@ typedef struct {
      * \brief forced_datarate See ForceRejoinReq LW 1.1 spec ch 5.13
      */
     uint8_t forced_datarate;
-
 } loramac_protocol_params;
 
 #endif /* LORAWAN_SYSTEM_LORAWAN_DATA_STRUCTURES_H_ */
