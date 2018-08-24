@@ -243,15 +243,6 @@ loramac_event_info_status_t LoRaMac::handle_join_accept_frame(const uint8_t *pay
         memcpy(_params.keys.js_enckey, _params.keys.nwk_key, sizeof(_params.keys.nwk_skey));
     }
 
-    uint8_t *decrypt_key = NULL;
-    uint8_t *mic_key = _params.keys.js_intkey; //in case of LW1.0.2 js_intkey == nwk_key == app_key
-
-    if (_params.join_request_type == JOIN_REQUEST) {
-        decrypt_key = _params.keys.nwk_key;
-    } else {
-        decrypt_key = _params.keys.js_enckey;
-    }
-
     if (0 != _lora_crypto.decrypt_join_frame(payload + 1, size - 1,
                                              decrypt_key, APPKEY_KEY_LENGTH,
                                              _params.rx_buffer + 1)) {
