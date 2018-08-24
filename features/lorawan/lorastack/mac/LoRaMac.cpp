@@ -88,6 +88,9 @@ LoRaMac::LoRaMac()
     _params.keys.app_key = NULL;
     _params.keys.nwk_key = NULL;
 
+    _params.rejoin_forced = false;
+    _params.forced_datarate = DR_0;
+
     memset(_params.keys.nwk_skey, 0, sizeof(_params.keys.nwk_skey));
     memset(_params.keys.app_skey, 0, sizeof(_params.keys.app_skey));
     memset(_params.keys.snwk_sintkey, 0, sizeof(_params.keys.snwk_sintkey));
@@ -147,11 +150,6 @@ const loramac_mcps_confirm_t *LoRaMac::get_mcps_confirmation() const
 const loramac_mcps_indication_t *LoRaMac::get_mcps_indication() const
 {
     return &_mcps_indication;
-}
-
-const loramac_mlme_confirm_t *LoRaMac::get_mlme_confirmation() const
-{
-    return &_mlme_confirmation;
 }
 
 const loramac_mlme_indication_t *LoRaMac::get_mlme_indication() const
@@ -768,7 +766,6 @@ void LoRaMac::on_radio_tx_done(lorawan_time_t timestamp)
         }
     } else {
         _mcps_confirmation.status = LORAMAC_EVENT_INFO_STATUS_OK;
-        _mlme_confirmation.status = LORAMAC_EVENT_INFO_STATUS_RX2_TIMEOUT;
     }
 
     _params.last_channel_idx = _params.channel;
@@ -841,7 +838,6 @@ void LoRaMac::on_radio_tx_timeout(void)
     }
 
     _mcps_confirmation.status = LORAMAC_EVENT_INFO_STATUS_TX_TIMEOUT;
-    _mlme_confirmation.status = LORAMAC_EVENT_INFO_STATUS_TX_TIMEOUT;
 
     _mac_commands.clear_command_buffer();
 
@@ -863,14 +859,8 @@ void LoRaMac::on_radio_rx_timeout(bool is_timeout)
 
     if (_params.rx_slot == RX_SLOT_WIN_1) {
         if (_params.is_node_ack_requested == true) {
-            _mcps_confirmation.status = is_timeout ?
-                                        LORAMAC_EVENT_INFO_STATUS_RX1_TIMEOUT :
-                                        LORAMAC_EVENT_INFO_STATUS_RX1_ERROR;
+            _mcps_confirmation.status = LORAMAC_EVENT_INFO_STATUS_RX1_ERROR;
         }
-        _mlme_confirmation.status = is_timeout ?
-                                    LORAMAC_EVENT_INFO_STATUS_RX1_TIMEOUT :
-                                    LORAMAC_EVENT_INFO_STATUS_RX1_ERROR;
-
         if (_device_class != CLASS_C) {
             if (_lora_time.get_elapsed_time(_params.timers.aggregated_last_tx_time) >= _params.rx_window2_delay) {
                 _lora_time.stop(_params.timers.rx_window2_timer);
@@ -878,14 +868,8 @@ void LoRaMac::on_radio_rx_timeout(bool is_timeout)
         }
     } else {
         if (_params.is_node_ack_requested == true) {
-            _mcps_confirmation.status = is_timeout ?
-                                        LORAMAC_EVENT_INFO_STATUS_RX2_TIMEOUT :
-                                        LORAMAC_EVENT_INFO_STATUS_RX2_ERROR;
+            _mcps_confirmation.status = LORAMAC_EVENT_INFO_STATUS_RX2_ERROR;
         }
-
-        _mlme_confirmation.status = is_timeout ?
-                                    LORAMAC_EVENT_INFO_STATUS_RX2_TIMEOUT :
-                                    LORAMAC_EVENT_INFO_STATUS_RX2_ERROR;
     }
 }
 
@@ -1692,9 +1676,11 @@ lorawan_status_t LoRaMac::join(bool is_otaa)
     return send_join_request();
 }
 
-lorawan_status_t LoRaMac::rejoin(join_req_type_t rejoin_type)
+lorawan_status_t LoRaMac::rejoin(join_req_type_t rejoin_type, bool is_forced, uint8_t datarate)
 {
     _params.join_request_type = rejoin_type;
+    _params.rejoin_forced = is_forced;
+    _params.forced_datarate = datarate;
 
     return send_join_request();
 }
@@ -1962,15 +1948,17 @@ lorawan_status_t LoRaMac::send_frame_on_channel(uint8_t channel)
     int8_t tx_power = 0;
 
     tx_config.channel = channel;
-    tx_config.datarate = _params.sys_params.channel_data_rate;
+    if (_params.rejoin_forced) {
+        tx_config.datarate = _params.forced_datarate;
+    } else {
+        tx_config.datarate = _params.sys_params.channel_data_rate;
+    }
     tx_config.tx_power = _params.sys_params.channel_tx_power;
     tx_config.max_eirp = _params.sys_params.max_eirp;
     tx_config.antenna_gain = _params.sys_params.antenna_gain;
     tx_config.pkt_len = _params.tx_buffer_len;
 
     _lora_phy->tx_config(&tx_config, &tx_power, &_params.timers.tx_toa);
-
-    _mlme_confirmation.status = LORAMAC_EVENT_INFO_STATUS_ERROR;
 
     _mcps_confirmation.status = LORAMAC_EVENT_INFO_STATUS_ERROR;
     _mcps_confirmation.data_rate = _params.sys_params.channel_data_rate;
@@ -1998,6 +1986,11 @@ void LoRaMac::reset_mcps_indication()
 {
     memset((uint8_t *) &_mcps_indication, 0, sizeof(_mcps_indication));
     _mcps_indication.status = LORAMAC_EVENT_INFO_STATUS_ERROR;
+}
+
+LoRaWANTimeHandler *LoRaMac::get_lora_time()
+{
+    return &_lora_time;
 }
 
 lorawan_status_t LoRaMac::initialize(EventQueue *queue,
@@ -2210,6 +2203,12 @@ server_type_t LoRaMac::get_server_type()
 uint8_t LoRaMac::get_current_adr_ack_limit()
 {
     return _lora_phy->get_adr_ack_limit();
+}
+
+void LoRaMac::get_rejoin_parameters(uint32_t& max_time, uint32_t& max_count)
+{
+    max_time = _lora_phy->get_rejoin_max_time();
+    max_count = _lora_phy->get_rejoin_max_count();
 }
 
 uint8_t LoRaMac::get_QOS_level()
