@@ -544,7 +544,6 @@ private:
     uint8_t _rx_payload[LORAMAC_PHY_MAXPAYLOAD];
     events::EventQueue *_queue;
     lorawan_time_t _tx_timestamp;
-
     uint32_t _rejoin_type1_send_period;
     uint32_t _rejoin_type1_stamp;
     timer_event_t _rejoin_type0_timer;
