@@ -65,6 +65,16 @@ using namespace mbed;
  */
 #define DOWN_LINK                                   1
 
+static void memcpy_convert_endianess(uint8_t *dst,
+                                     const uint8_t *src,
+                                     uint16_t size)
+{
+    dst = dst + (size - 1);
+    while (size--) {
+        *dst-- = *src++;
+    }
+}
+
 LoRaMac::LoRaMac()
     : _lora_time(),
       _lora_phy(NULL),
@@ -216,33 +226,12 @@ loramac_event_info_status_t LoRaMac::handle_join_accept_frame(const uint8_t *pay
     uint32_t mic_rx = 0;
     server_type_t stype = LW1_0_2;
 
-    //Store server type to local so that invalid join accept of rejoin request won't affect the orig. type.
-    if ( (((_params.rx_buffer[11] >> 7) & 0x01) == 1) && MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_1) {
-        stype = LW1_1;
-    } else {
-        stype = LW1_0_2;
-        //Server does not support LW 1.1 so we need to unset JS keys
-        memcpy(_params.keys.js_intkey, _params.keys.nwk_key, sizeof(_params.keys.nwk_skey));
-        memcpy(_params.keys.js_enckey, _params.keys.nwk_key, sizeof(_params.keys.nwk_skey));
-    }
-
     uint8_t *decrypt_key = NULL;
-    uint8_t *mic_key = _params.keys.js_intkey; //in case of LW1.0.2 js_intkey == nwk_key == app_key
 
     if (_params.join_request_type == JOIN_REQUEST) {
         decrypt_key = _params.keys.nwk_key;
     } else {
         decrypt_key = _params.keys.js_enckey;
-    }
-
-    //Store server type to local so that invalid join accept of rejoin request won't affect the orig. type.
-    if ( (((_params.rx_buffer[11] >> 7) & 0x01) == 1) && MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_1) {
-        stype = LW1_1;
-    } else {
-        stype = LW1_0_2;
-        //Server does not support LW 1.1 so we need to unset JS keys
-        memcpy(_params.keys.js_intkey, _params.keys.nwk_key, sizeof(_params.keys.nwk_skey));
-        memcpy(_params.keys.js_enckey, _params.keys.nwk_key, sizeof(_params.keys.nwk_skey));
     }
 
     if (0 != _lora_crypto.decrypt_join_frame(payload + 1, size - 1,
@@ -251,12 +240,25 @@ loramac_event_info_status_t LoRaMac::handle_join_accept_frame(const uint8_t *pay
         return LORAMAC_EVENT_INFO_STATUS_CRYPTO_FAIL;
     }
 
+    //Store server type to local so that invalid join accept of rejoin request won't affect the orig. type.
+    if ( (((_params.rx_buffer[11] >> 7) & 0x01) == 1) && MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_1) {
+        stype = LW1_1;
+    } else {
+        stype = LW1_0_2;
+        //Server does not support LW 1.1 so we need to unset JS keys
+        memcpy(_params.keys.js_intkey, _params.keys.nwk_key, sizeof(_params.keys.nwk_skey));
+        memcpy(_params.keys.js_enckey, _params.keys.nwk_key, sizeof(_params.keys.nwk_skey));
+    }
+
     uint8_t payload_start = 1;
     uint8_t mic_start = 0;
     uint8_t args_size = 0;
     uint8_t args[16];
+
+    _params.rx_buffer[0] = payload[0];
+    uint8_t *mic_key = _params.keys.js_intkey; //in case of LW1.0.2 js_intkey == nwk_key == app_key
+
     if (stype == LW1_0_2) {
-        _params.rx_buffer[0] = payload[0];
         mic_start = size - LORAMAC_MFR_LEN;
 
         memcpy(args, _params.rx_buffer + 1, 6);
@@ -264,16 +266,20 @@ loramac_event_info_status_t LoRaMac::handle_join_accept_frame(const uint8_t *pay
         args_size = 8;
     } else {
         //MIC calculation needs more params, so we move the payload a bit
-        _params.rx_buffer[0] = (uint8_t)_params.join_request_type;
-        memcpy(_params.rx_buffer + 11, _params.rx_buffer, size - LORAMAC_MFR_LEN);
-        memcpy(_params.rx_buffer + 1, _params.keys.app_eui, 8);
-        memcpy(_params.rx_buffer + 9, (uint8_t *) &_params.dev_nonce, 2);
-        mic_start = size - LORAMAC_MFR_LEN + 11;
+        memmove(_params.rx_buffer + 11, _params.rx_buffer, size);
+        _params.rx_buffer[0] = _params.join_request_type; // JoinReqType
+        memcpy_convert_endianess(_params.rx_buffer + 1,  _params.keys.app_eui, 8); // JoinEUI
+        _params.rx_buffer[9] = _params.dev_nonce & 0xFF; // DevNonce
+        _params.rx_buffer[10] = (_params.dev_nonce >> 8) & 0xFF;
+        size += 11;
+
+        mic_start = size - LORAMAC_MFR_LEN;
         payload_start += 11;
 
         memcpy(args, _params.rx_buffer + payload_start, 3);
-        memcpy(args + 3, _params.keys.app_eui, 8);
-        memcpy(args + 3 + 8, (uint8_t *) &_params.dev_nonce, 2);
+        memcpy_convert_endianess(args + 3, _params.keys.app_eui, 8);
+        args[3+8] = _params.dev_nonce & 0xFF;
+        args[3+9] = (_params.dev_nonce >> 8) & 0xFF;
         args_size = 13;
     }
 
@@ -1550,7 +1556,10 @@ lorawan_status_t LoRaMac::prepare_join(const lorawan_connect_t *params, bool is_
                 _params.keys.nwk_key = params->connection_u.otaa.app_key;
             }
 
-            if (0 != _lora_crypto.compute_join_server_keys(_params.keys.nwk_key, APPKEY_KEY_LENGTH, _params.keys.dev_eui,
+            uint8_t converted_eui[8];
+            memcpy_convert_endianess(converted_eui, _params.keys.dev_eui, 8);
+
+            if (0 != _lora_crypto.compute_join_server_keys(_params.keys.nwk_key, APPKEY_KEY_LENGTH, converted_eui,
                                                            _params.keys.js_intkey, _params.keys.js_enckey)) {
                 return LORAWAN_STATUS_CRYPTO_FAIL;
             }
@@ -1625,7 +1634,10 @@ lorawan_status_t LoRaMac::prepare_join(const lorawan_connect_t *params, bool is_
             _params.keys.nwk_key = _params.keys.app_key;
         }
 
-        if (0 != _lora_crypto.compute_join_server_keys(_params.keys.nwk_key, APPKEY_KEY_LENGTH, _params.keys.dev_eui,
+        uint8_t converted_eui[8];
+        memcpy_convert_endianess(converted_eui, _params.keys.dev_eui, 8);
+
+        if (0 != _lora_crypto.compute_join_server_keys(_params.keys.nwk_key, APPKEY_KEY_LENGTH, converted_eui,
                                                        _params.keys.js_intkey, _params.keys.js_enckey)) {
             return LORAWAN_STATUS_CRYPTO_FAIL;
         }
@@ -1683,16 +1695,6 @@ lorawan_status_t LoRaMac::rejoin(join_req_type_t rejoin_type, bool is_forced, ui
     _params.forced_datarate = datarate;
 
     return send_join_request();
-}
-
-static void memcpy_convert_endianess(uint8_t *dst,
-                                     const uint8_t *src,
-                                     uint16_t size)
-{
-    dst = dst + (size - 1);
-    while (size--) {
-        *dst-- = *src++;
-    }
 }
 
 lorawan_status_t LoRaMac::prepare_frame(loramac_mhdr_t *machdr,
