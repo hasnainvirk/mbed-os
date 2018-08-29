@@ -770,9 +770,11 @@ void LoRaWANStack::process_reception(const uint8_t *const payload, uint16_t size
     _ctrl_flags &= ~RETRY_EXHAUSTED_FLAG;
     _rejoin_type0_counter++;
 
+    bool joined = _loramac.nwk_joined();
+
     _loramac.on_radio_rx_done(payload, size, rssi, snr, callback(this, &LoRaWANStack::mlme_confirm_handler));
 
-    if (!_loramac.nwk_joined()) {
+    if (!joined) {
         _ready_for_rx = true;
         return;
     }
