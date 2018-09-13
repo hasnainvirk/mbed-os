@@ -722,6 +722,8 @@ private:
 
     bool _continuous_rx2_window_open;
 
+    bool _dl_fport_available;
+
     device_class_t _device_class;
 };
 
