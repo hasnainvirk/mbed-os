@@ -43,7 +43,7 @@ SPDX-License-Identifier: BSD-3-Clause
 
 LoRaPHY::LoRaPHY()
     : _radio(NULL),
-_     _lora_time(NULL),
+      _lora_time(NULL),
       _server_adr_ack_limit(0),
       _server_adr_ack_delay(0),
       _rejoin_max_time(MBED_CONF_LORA_REJOIN_DEFAULT_MAX_TIME),
