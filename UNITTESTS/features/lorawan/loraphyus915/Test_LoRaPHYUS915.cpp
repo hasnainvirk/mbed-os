@@ -70,8 +70,6 @@ public:
 
     virtual bool check_rf_frequency(uint32_t frequency){ return bool_value; };
 
-    virtual void set_tx_continuous_wave(uint32_t freq, int8_t power, uint16_t time){};
-
     virtual void lock(void){};
 
     virtual void unlock(void){};
@@ -231,12 +229,3 @@ TEST_F(Test_LoRaPHYUS915, apply_DR_offset)
     }
 }
 
-TEST_F(Test_LoRaPHYUS915, set_tx_cont_mode)
-{
-    cw_mode_params_t p;
-    memset(&p, 0, sizeof(p));
-    object->set_tx_cont_mode(&p, 0);
-
-    p.datarate = 4;
-    object->set_tx_cont_mode(&p, 0);
-}

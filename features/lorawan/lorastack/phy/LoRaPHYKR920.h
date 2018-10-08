@@ -63,9 +63,6 @@ public:
                                               lorawan_time_t* time,
                                               lorawan_time_t* aggregate_timeOff);
 
-    virtual void set_tx_cont_mode(cw_mode_params_t* continuousWave,
-                                  uint32_t frequency = 0);
-
 
 private:
 

@@ -71,8 +71,6 @@ public:
 
     virtual bool check_rf_frequency(uint32_t frequency){ return bool_value; };
 
-    virtual void set_tx_continuous_wave(uint32_t freq, int8_t power, uint16_t time){};
-
     virtual void lock(void){};
 
     virtual void unlock(void){};
