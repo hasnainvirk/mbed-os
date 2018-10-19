@@ -639,7 +639,6 @@ void LoRaWANStack::process_transmission_timeout()
 void LoRaWANStack::process_transmission(void)
 {
     tr_debug("Transmission completed");
-    _loramac.on_radio_tx_done(_tx_timestamp);
 
     if (_device_current_state == DEVICE_STATE_JOINING) {
         _device_current_state = DEVICE_STATE_AWAITING_JOIN_ACCEPT;
