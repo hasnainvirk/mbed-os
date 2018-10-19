@@ -653,7 +653,7 @@ void LoRaWANStack::process_transmission(void)
 
     _loramac.on_radio_tx_done(_tx_timestamp);
     
-    if (_loramac.get_server_type() == LW1_1 && _device_mode_ind_ongoing) {
+    if (_loramac.get_server_type() == LW1_1 && _device_mode_ind_ongoing == true) {
         _device_mode_ind_ongoing = false;
         _loramac.set_device_class(device_class_t(_new_class_type), mbed::callback(this, &LoRaWANStack::post_process_tx_no_reception));
         send_event_to_application(CLASS_CHANGED);
@@ -771,7 +771,7 @@ void LoRaWANStack::process_reception(const uint8_t *const payload, uint16_t size
 
     bool joined = _loramac.nwk_joined();
 
-    _loramac.on_radio_rx_done(payload, size, rssi, snr, callback(this, &LoRaWANStack::mlme_confirm_handler));
+    _loramac.on_radio_rx_done(payload, size, rssi, snr, mbed::callback(this, &LoRaWANStack::mlme_confirm_handler));
 
     if (!joined) {
         _ready_for_rx = true;
@@ -846,7 +846,6 @@ void LoRaWANStack::process_reception_timeout(bool is_timeout)
      * never occurs.
      */
     if (slot == RX_SLOT_WIN_2) {
-
 
         post_process_tx_no_reception();
 
