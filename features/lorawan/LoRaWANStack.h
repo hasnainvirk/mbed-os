@@ -507,6 +507,7 @@ private:
     void handle_scheduling_failure(void);
 
     void process_rejoin(join_req_type_t rejoin_type, bool is_forced);
+    void poll_rejoin(void);
     void reset_forced_rejoin();
 
     void forced_timer_expiry();
