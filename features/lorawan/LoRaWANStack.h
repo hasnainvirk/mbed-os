@@ -508,6 +508,8 @@ private:
     uint8_t _rx_payload[LORAMAC_PHY_MAXPAYLOAD];
     events::EventQueue *_queue;
     lorawan_time_t _tx_timestamp;
+    lorawan_time_t _rx_timestamp;
+    lorawan_time_t _timeout_timestamp;
 };
 
 #endif /* LORAWANSTACK_H_ */

@@ -400,6 +400,8 @@ float LoRaPHY::compute_symb_timeout_fsk(uint8_t phy_dr)
     return (8.0 / (float) phy_dr); // 1 symbol equals 1 byte
 }
 
+#include "mbed-trace/mbed_trace.h"
+#define TRACE_GROUP "LPHY"
 
 void LoRaPHY::get_rx_window_params(float t_symb, uint8_t min_rx_symb,
                                    float error_fudge, float wakeup_time,
@@ -431,6 +433,8 @@ void LoRaPHY::get_rx_window_params(float t_symb, uint8_t min_rx_symb,
     // in terms of 'bytes' for FSK
     *window_length = (uint32_t) ceil(window_len_in_ms / t_symb);
 
+/*    *window_length = MAX((uint32_t) ceil(((2 * min_rx_symb - 8) * t_symb + 2.0 * error_fudge) / t_symb), min_rx_symb);
+    *window_offset = (int32_t) ceil((4.0 * t_symb) - ((*window_length * t_symb) / 2.0) - wakeup_time);*/
 
 }
 

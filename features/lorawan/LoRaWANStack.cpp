@@ -519,6 +519,7 @@ void LoRaWANStack::tx_interrupt_handler(void)
 void LoRaWANStack::rx_interrupt_handler(const uint8_t *payload, uint16_t size,
                                         int16_t rssi, int8_t snr)
 {
+    _rx_timestamp = _loramac.get_current_time();
     if (!_ready_for_rx || size > sizeof _rx_payload) {
         return;
     }
@@ -550,6 +551,7 @@ void LoRaWANStack::tx_timeout_interrupt_handler(void)
 
 void LoRaWANStack::rx_timeout_interrupt_handler(void)
 {
+    _timeout_timestamp = _loramac.get_current_time();
     const int ret = _queue->call(this, &LoRaWANStack::process_reception_timeout,
                                  true);
     MBED_ASSERT(ret != 0);
@@ -577,6 +579,7 @@ void LoRaWANStack::process_transmission_timeout()
 void LoRaWANStack::process_transmission(void)
 {
     tr_debug("Transmission completed");
+    tr_debug("TXD = %llu", tx_done_time);
 
     if (_device_current_state == DEVICE_STATE_JOINING) {
         _device_current_state = DEVICE_STATE_AWAITING_JOIN_ACCEPT;
@@ -693,9 +696,14 @@ void LoRaWANStack::handle_scheduling_failure(void)
 }
 
 
+
 void LoRaWANStack::process_reception(const uint8_t *const payload, uint16_t size,
                                      int16_t rssi, int8_t snr)
 {
+    tr_debug("RXD %llu", data_recvd_time);
+    tr_debug("RXTim %llu", data_recvd_time - last_rx_spi_cmd);
+    tr_debug("RXTim(ms) %f", ((float)(data_recvd_time - last_rx_spi_cmd))/1000.0f);
+    tr_debug("PktSize %d", size);
     _device_current_state = DEVICE_STATE_RECEIVING;
 
     _ctrl_flags &= ~MSG_RECVD_FLAG;
@@ -729,6 +737,11 @@ void LoRaWANStack::process_reception(const uint8_t *const payload, uint16_t size
         _loramac.post_process_mcps_ind();
         _ctrl_flags |= MSG_RECVD_FLAG;
         state_controller(DEVICE_STATE_STATUS_CHECK);
+    } else {
+        if (size > 13) {
+            tr_debug("No msg ?");
+            // why !!
+        }
     }
 
     // complete the cycle only if TX_DONE_FLAG is set
@@ -749,6 +762,11 @@ void LoRaWANStack::process_reception(const uint8_t *const payload, uint16_t size
 
 void LoRaWANStack::process_reception_timeout(bool is_timeout)
 {
+    tr_debug("Timeout-TXD(ms) %f", ((float)(timeout_time - tx_done_time))/1000.0f);
+    tr_debug("SPIrx1-TXD(ms) %f", ((float)(last_rx_spi_cmd - tx_done_time))/1000.0f);
+    tr_debug("Timeout %llu", timeout_time);
+    tr_debug("Tdiff(ms) %f", ((float)(timeout_time - last_rx_spi_cmd))/1000.0f);
+
     rx_slot_t slot = _loramac.get_current_slot();
 
     // when is_timeout == false, a CRC error took place in the received frame

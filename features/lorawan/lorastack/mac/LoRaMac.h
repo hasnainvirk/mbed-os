@@ -56,6 +56,13 @@
 
 #include "platform/ScopedLock.h"
 
+
+#include "SX1276_LoRaRadio.h"
+extern us_timestamp_t last_rx_spi_cmd;
+extern us_timestamp_t timeout_time;
+extern us_timestamp_t data_recvd_time;
+extern us_timestamp_t tx_done_time;
+
 class LoRaMac {
 
 public:

@@ -907,6 +907,8 @@ void LoRaMac::open_rx1_window(void)
     _lora_phy->rx_config(&_params.rx_window1_config);
     _lora_phy->handle_receive();
 
+    tr_debug("SPIrx1 %llu", last_rx_spi_cmd);
+
     tr_debug("RX1 slot open, Freq = %lu", _params.rx_window1_config.frequency);
 }
 
@@ -939,6 +941,7 @@ void LoRaMac::open_rx2_window()
     _lora_phy->rx_config(&_params.rx_window2_config);
     _lora_phy->handle_receive();
     _params.rx_slot = _params.rx_window2_config.rx_slot;
+    tr_debug("SPIrx2 %llu", last_rx_spi_cmd);
 
     tr_debug("RX2 slot open, Freq = %lu", _params.rx_window2_config.frequency);
 }
@@ -1157,6 +1160,11 @@ lorawan_status_t LoRaMac::schedule_tx()
                                      MBED_CONF_LORA_DOWNLINK_PREAMBLE_LENGTH,
                                      MBED_CONF_LORA_MAX_SYS_RX_ERROR,
                                      &_params.rx_window2_config);
+
+    tr_debug("RX1_len = %d symbols, RX1_offset = %d", _params.rx_window1_config.window_timeout,
+             _params.rx_window1_config.window_offset);
+    tr_debug("RX2_len = %d symbols, RX2_offset = %d", _params.rx_window2_config.window_timeout,
+             _params.rx_window2_config.window_offset);
 
     if (!_is_nwk_joined) {
         _params.rx_window1_delay = _params.sys_params.join_accept_delay1
