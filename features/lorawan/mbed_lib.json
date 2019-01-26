@@ -2,7 +2,7 @@
     "name": "lora",
     "config": {
         "version": {
-            "help": "LoRaWAN Version: LW1.0.2 = 0, LW1.1 = 10",
+            "help": "LoRaWAN Version: LW1.0.2 = 0, LW1.0.3 = 1, LW1.1 = 10",
             "value": 0
         },
         "phy": {
@@ -25,16 +25,12 @@
             "help": "Application IEEE EUI. In case of LW1.1 or greater this will be used as JoinEUI",
             "value": "{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}"
         },
-        "use-secure-element": {
-            "help": "Defines whether device contains a secure element to handle cryptographic operations",
-            "value": false
-        },
         "application-key": {
-            "help": "AES encryption/decryption cipher application key",
+            "help": "AES encryption/decryption cipher application key. If MBEDTLS_AES_ALT is defined, this will be used as a slot identifier",
             "value": "{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}"
         },
         "network-key": {
-            "help": "AES encryption/decryption cipher network key, in case of LW1.0.x not used",
+            "help": "AES encryption/decryption cipher network key, in case of LW1.0.x not used. If MBEDTLS_AES_ALT is defined, this will be used as a slot identifier",
             "value": "{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}"
         },
         "device-address": {
@@ -42,20 +38,28 @@
             "value": "0x00000000"
         },
         "nwkskey": {
-            "help": "AES encryption/decryption cipher network session key. In case of LW1.1 or greater is used as FNwkSIntKey",
+            "help": "AES encryption/decryption cipher network session key (ABP). In case of LW1.1 or greater is used as FNwkSIntKey. If MBEDTLS_AES_ALT is defined, this will be used as a slot identifier",
             "value": "{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}"
         },
         "snwksintkey": {
-            "help": "Serving network session integrity key. For LW1.1 or greater",
+            "help": "Serving network session integrity key (ABP). For LW1.1 or greater. If MBEDTLS_AES_ALT is defined, this will be used as a slot identifier",
             "value": "{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}"
         },
         "nwksenckey": {
-            "help": "Network session encryption key. For LW1.1 or greater",
+            "help": "Network session encryption key (ABP). For LW1.1 or greater. If MBEDTLS_AES_ALT is defined, this will be used as a slot identifier",
             "value": "{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}"
         },
         "appskey": {
-            "help": "AES encryption/decryption cipher application session key",
+            "help": "AES encryption/decryption cipher application session key (ABP). If MBEDTLS_AES_ALT is defined, this will be used as a slot identifier",
             "value": "{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}"
+        },
+        "jsintkey": {
+            "help": "Join server integrity key slot identifier. Only used if MBEDTLS_AES_ALT is defined.",
+            "value": "\"SLOT_06_0\""
+        },
+        "jsenckey": {
+            "help": "Join server encryption key slot identifier. Only used if MBEDTLS_AES_ALT is defined.",
+            "value": "\"SLOT_07_0\""
         },
         "app-port": {
             "help": "LoRaWAN application port, default: 15",
@@ -91,7 +95,7 @@
         },
         "max-sys-rx-error": {
             "help": "Maximum timing error of the receiver in ms. The receiver will turn on in [-RxError : + RxError]",
-            "value": 10
+            "value": 100
         },
         "downlink-preamble-length": {
             "help": "Number of preamble symbols need to be captured (out of 8) for successful demodulation",
