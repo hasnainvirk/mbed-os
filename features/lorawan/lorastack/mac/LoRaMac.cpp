@@ -1029,7 +1029,7 @@ void LoRaMac::open_rx1_window(void)
     _lora_phy->rx_config(&_params.rx_window1_config);
     _lora_phy->handle_receive();
 
-    tr_debug("RX1 slot open, Freq = %lu", _params.rx_window1_config.frequency);
+    tr_debug("RX1-Slot -OK- freq = %lu", _params.rx_window1_config.frequency);
 }
 
 void LoRaMac::open_rx2_window()
@@ -1062,7 +1062,7 @@ void LoRaMac::open_rx2_window()
     _lora_phy->handle_receive();
     _params.rx_slot = _params.rx_window2_config.rx_slot;
 
-    tr_debug("RX2 slot open, Freq = %lu", _params.rx_window2_config.frequency);
+    tr_debug("RX2-Slot -OK- freq = %lu", _params.rx_window2_config.frequency);
 }
 
 void LoRaMac::on_ack_timeout_timer_event(void)
@@ -1637,7 +1637,7 @@ lorawan_status_t LoRaMac::prepare_join(const lorawan_connect_t *params, bool is_
             _params.app_eui = params->connection_u.otaa.app_eui;
             lorawan_status_t ret;
 
-            if (MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_0_2) {
+            if (MBED_CONF_LORA_VERSION != LORAWAN_VERSION_1_1) {
                 ret = _lora_crypto.set_keys(params->connection_u.otaa.app_key,
                                             params->connection_u.otaa.app_key);
             } else {
@@ -1689,7 +1689,7 @@ lorawan_status_t LoRaMac::prepare_join(const lorawan_connect_t *params, bool is_
             _params.dev_addr = params->connection_u.abp.dev_addr;
 
             lorawan_status_t ret;
-            if (MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_0_2) {
+            if (MBED_CONF_LORA_VERSION != LORAWAN_VERSION_1_1) {
                 ret = _lora_crypto.set_keys(NULL, NULL, params->connection_u.abp.nwk_skey,
                                             params->connection_u.abp.app_skey,
                                             params->connection_u.abp.nwk_skey,
@@ -1718,7 +1718,7 @@ lorawan_status_t LoRaMac::prepare_join(const lorawan_connect_t *params, bool is_
         _params.max_join_request_trials = MBED_CONF_LORA_NB_TRIALS;
         lorawan_status_t ret;
 
-        if (MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_0_2) {
+        if (MBED_CONF_LORA_VERSION != LORAWAN_VERSION_1_1) {
             ret = _lora_crypto.set_keys(const_cast<uint8_t *>(app_key),
                                         const_cast<uint8_t *>(app_key));
         } else {
@@ -1756,7 +1756,7 @@ lorawan_status_t LoRaMac::prepare_join(const lorawan_connect_t *params, bool is_
         _params.dev_addr = MBED_CONF_LORA_DEVICE_ADDRESS;
 
         lorawan_status_t ret;
-        if (MBED_CONF_LORA_VERSION == LORAWAN_VERSION_1_0_2) {
+        if (MBED_CONF_LORA_VERSION != LORAWAN_VERSION_1_1) {
             ret = _lora_crypto.set_keys(NULL, NULL, nwk_skey,
                                         app_skey,
                                         nwk_skey,
