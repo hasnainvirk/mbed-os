@@ -55,8 +55,8 @@ const PinMap PinMap_DAC[] = {
 /************SERCOM Pins***********/
 const PinMap PinMap_SERCOM_PAD[] = {
     {PA04, SERCOM0_PAD0, 3},
-    {PA08, SERCOM2_PAD0, 3},
     {PA05, SERCOM0_PAD1, 3},
+    {PA08, SERCOM2_PAD0, 3},
     {PA09, SERCOM2_PAD1, 3},
     {PA06, SERCOM0_PAD2, 3},
     {PA10, SERCOM0_PAD2, 2},

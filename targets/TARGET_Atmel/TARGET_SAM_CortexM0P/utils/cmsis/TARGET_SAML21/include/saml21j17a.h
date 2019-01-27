@@ -3,7 +3,7 @@
  *
  * \brief Header file for SAML21J17A
  *
- * Copyright (c) 2014-2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -40,9 +40,6 @@
  * \asf_license_stop
  *
  */
-/*
- * Support and FAQ: visit <a href="http://www.atmel.com/design-support/">Atmel Support</a>
- */
 
 #ifndef _SAML21J17A_
 #define _SAML21J17A_
@@ -59,7 +56,7 @@
 /*@{*/
 
 #ifdef __cplusplus
-extern "C" {
+ extern "C" {
 #endif
 
 #if !(defined(__ASSEMBLY__) || defined(__IAR_SYSTEMS_ASM__))
@@ -261,35 +258,35 @@ void PICOP_Handler               ( void );
 /** \defgroup SAML21J17A_api Peripheral Software API */
 /*@{*/
 
-#include "comp_ac.h"
-#include "comp_adc.h"
-#include "comp_aes.h"
-#include "comp_ccl.h"
-#include "comp_dac.h"
-#include "comp_dmac.h"
-#include "comp_dsu.h"
-#include "comp_eic.h"
-#include "comp_evsys.h"
-#include "comp_gclk.h"
-#include "comp_mclk.h"
-#include "comp_mtb.h"
-#include "comp_nvmctrl.h"
-#include "comp_opamp.h"
-#include "comp_oscctrl.h"
-#include "comp_osc32kctrl.h"
-#include "comp_pac.h"
-#include "comp_pm.h"
-#include "comp_port.h"
-#include "comp_rstc.h"
-#include "comp_rtc.h"
-#include "comp_sercom.h"
-#include "comp_supc.h"
-#include "comp_tal.h"
-#include "comp_tc.h"
-#include "comp_tcc.h"
-#include "comp_trng.h"
-#include "comp_usb.h"
-#include "comp_wdt.h"
+#include "component/ac.h"
+#include "component/adc.h"
+#include "component/aes.h"
+#include "component/ccl.h"
+#include "component/dac.h"
+#include "component/dmac.h"
+#include "component/dsu.h"
+#include "component/eic.h"
+#include "component/evsys.h"
+#include "component/gclk.h"
+#include "component/mclk.h"
+#include "component/mtb.h"
+#include "component/nvmctrl.h"
+#include "component/opamp.h"
+#include "component/oscctrl.h"
+#include "component/osc32kctrl.h"
+#include "component/pac.h"
+#include "component/pm.h"
+#include "component/port.h"
+#include "component/rstc.h"
+#include "component/rtc.h"
+#include "component/sercom.h"
+#include "component/supc.h"
+#include "component/tal.h"
+#include "component/tc.h"
+#include "component/tcc.h"
+#include "component/trng.h"
+#include "component/usb.h"
+#include "component/wdt.h"
 /*@}*/
 
 /* ************************************************************************** */
@@ -298,46 +295,46 @@ void PICOP_Handler               ( void );
 /** \defgroup SAML21J17A_reg Registers Access Definitions */
 /*@{*/
 
-#include "ins_ac.h"
-#include "ins_adc.h"
-#include "ins_aes.h"
-#include "ins_ccl.h"
-#include "ins_dac.h"
-#include "ins_dmac.h"
-#include "ins_dsu.h"
-#include "ins_eic.h"
-#include "ins_evsys.h"
-#include "ins_gclk.h"
-#include "ins_mclk.h"
-#include "ins_mtb.h"
-#include "ins_nvmctrl.h"
-#include "ins_opamp.h"
-#include "ins_oscctrl.h"
-#include "ins_osc32kctrl.h"
-#include "ins_pac.h"
-#include "ins_pm.h"
-#include "ins_port.h"
-#include "ins_rstc.h"
-#include "ins_rtc.h"
-#include "ins_sercom0.h"
-#include "ins_sercom1.h"
-#include "ins_sercom2.h"
-#include "ins_sercom3.h"
-#include "ins_sercom4.h"
-#include "ins_sercom5.h"
-#include "ins_supc.h"
-#include "ins_tal.h"
-#include "ins_tc0.h"
-#include "ins_tc1.h"
-#include "ins_tc2.h"
-#include "ins_tc3.h"
-#include "ins_tc4.h"
-#include "ins_tcc0.h"
-#include "ins_tcc1.h"
-#include "ins_tcc2.h"
-#include "ins_trng.h"
-#include "ins_usb.h"
-#include "ins_wdt.h"
+#include "instance/ac.h"
+#include "instance/adc.h"
+#include "instance/aes.h"
+#include "instance/ccl.h"
+#include "instance/dac.h"
+#include "instance/dmac.h"
+#include "instance/dsu.h"
+#include "instance/eic.h"
+#include "instance/evsys.h"
+#include "instance/gclk.h"
+#include "instance/mclk.h"
+#include "instance/mtb.h"
+#include "instance/nvmctrl.h"
+#include "instance/opamp.h"
+#include "instance/oscctrl.h"
+#include "instance/osc32kctrl.h"
+#include "instance/pac.h"
+#include "instance/pm.h"
+#include "instance/port.h"
+#include "instance/rstc.h"
+#include "instance/rtc.h"
+#include "instance/sercom0.h"
+#include "instance/sercom1.h"
+#include "instance/sercom2.h"
+#include "instance/sercom3.h"
+#include "instance/sercom4.h"
+#include "instance/sercom5.h"
+#include "instance/supc.h"
+#include "instance/tal.h"
+#include "instance/tc0.h"
+#include "instance/tc1.h"
+#include "instance/tc2.h"
+#include "instance/tc3.h"
+#include "instance/tc4.h"
+#include "instance/tcc0.h"
+#include "instance/tcc1.h"
+#include "instance/tcc2.h"
+#include "instance/trng.h"
+#include "instance/usb.h"
+#include "instance/wdt.h"
 /*@}*/
 
 /* ************************************************************************** */

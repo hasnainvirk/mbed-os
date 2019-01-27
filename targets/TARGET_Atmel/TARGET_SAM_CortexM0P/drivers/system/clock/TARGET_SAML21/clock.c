@@ -734,16 +734,16 @@ enum status_code system_clock_source_disable(
  * Configures a Generic Clock Generator with the configuration from \c conf_clocks.h.
  */
 #  define _CONF_CLOCK_GCLK_CONFIG(n, unused) \
-	if (CONF_CLOCK_GCLK_##n##_ENABLE == true) { \
-		struct system_gclk_gen_config gclk_conf;                          \
-		system_gclk_gen_get_config_defaults(&gclk_conf);                  \
-		gclk_conf.source_clock    = CONF_CLOCK_GCLK_##n##_CLOCK_SOURCE;   \
-		gclk_conf.division_factor = CONF_CLOCK_GCLK_##n##_PRESCALER;      \
-		gclk_conf.run_in_standby  = CONF_CLOCK_GCLK_##n##_RUN_IN_STANDBY; \
-		gclk_conf.output_enable   = CONF_CLOCK_GCLK_##n##_OUTPUT_ENABLE;  \
-		system_gclk_gen_set_config(GCLK_GENERATOR_##n, &gclk_conf);       \
-		system_gclk_gen_enable(GCLK_GENERATOR_##n);                       \
-	}
+        if (CONF_CLOCK_GCLK_##n##_ENABLE == true) { \
+                struct system_gclk_gen_config gclk_conf;                          \
+                system_gclk_gen_get_config_defaults(&gclk_conf);                  \
+                gclk_conf.source_clock    = CONF_CLOCK_GCLK_##n##_CLOCK_SOURCE;   \
+                gclk_conf.division_factor = CONF_CLOCK_GCLK_##n##_PRESCALER;      \
+                gclk_conf.run_in_standby  = CONF_CLOCK_GCLK_##n##_RUN_IN_STANDBY; \
+                gclk_conf.output_enable   = CONF_CLOCK_GCLK_##n##_OUTPUT_ENABLE;  \
+                system_gclk_gen_set_config(GCLK_GENERATOR_##n, &gclk_conf);       \
+                system_gclk_gen_enable(GCLK_GENERATOR_##n);                       \
+        }
 
 /** \internal
  *
@@ -751,7 +751,7 @@ enum status_code system_clock_source_disable(
  * provided that it is not the main Generic Clock Generator channel.
  */
 #  define _CONF_CLOCK_GCLK_CONFIG_NONMAIN(n, unused) \
-		if (n > 0) { _CONF_CLOCK_GCLK_CONFIG(n, unused); }
+                if (n > 0) { _CONF_CLOCK_GCLK_CONFIG(n, unused); }
 #endif
 
 /**

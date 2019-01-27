@@ -57,11 +57,12 @@ extern uint32_t _ezero;
 extern uint32_t _sstack;
 extern uint32_t _estack;
 
-/** \cond DOXYGEN_SHOULD_SKIP_THIS */
-int main(void);
-/** \endcond */
+extern void __libc_init_array(void);
+extern int main(void);
 
-void __libc_init_array(void);
+/* Reset entry point*/
+void software_init_hook(void);
+void pre_main(void) __attribute__((weak));
 
 /* Default empty handler */
 void Dummy_Handler(void);
@@ -258,14 +259,17 @@ void Reset_Handler(void)
     pSrc = (uint32_t *) & _sfixed;
     SCB->VTOR = ((uint32_t) pSrc & SCB_VTOR_TBLOFF_Msk);
 
-    /* Initialize the C library */
-    __libc_init_array();
-
     /* Overwriting the default value of the NVMCTRL.CTRLB.MANW bit (errata reference 13134) */
     NVMCTRL->CTRLB.bit.MANW = 1;
 
-    /* Branch to main function */
-    main();
+    SystemInit();
+    // if (pre_main)  { // give control to the RTOS
+        software_init_hook();  // this will also call __libc_init_array
+    // }
+    // else {           // for BareMetal (non-RTOS) build
+    //     __libc_init_array();
+    //     main();
+    // }
 
     /* Infinite loop */
     while (1);
