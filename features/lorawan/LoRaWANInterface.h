@@ -212,6 +212,32 @@ public:
      */
     lorawan_status_t set_datarate(uint8_t data_rate);
 
+   /** Sets a given frequency to be used by the stack for RX2 window
+     *
+     * Usually the RX2 frequency is fixed for a certain region or a change can be
+     * communicated through MAC commands. This API provides yet another way to tell
+     * the stack to use a certain frequency for RX2. It is especially useful in the
+     * situations when you know out-of-band that the RX2 frequency being used by the
+     * NS is different from the default RX2 frequency mandated in the protocol
+     * specification. Another example for the usage of this API could be the situation
+     * when special plug-ins or application extensions like 'MulticastControlPackage'
+     * requires the device to switch to class C and start continuous listening on a
+     * given frequency.
+     *
+     * @param    frequency     Frequency in Hz to be used as RX2 frequency
+     * @param    dr            Table index of the data rate, e.g., DR_0 which means SF12
+     *
+     * @return   LORAWAN_STATUS_OK on success, negative error code on failure
+     */
+    lorawan_status_t set_rx2_frequency_and_dr(const uint32_t frequency, const uint8_t dr);
+
+    /** Restores default RX2 frequency as mandated by specifications
+     *
+     * This API reverses the effect of 'set_rx2_frequency' and restores the
+     * default RX2 frequency.
+     */
+    void restore_rx2_frequency_and_dr(void);
+
     /** Enables adaptive data rate (ADR)
      *
      * The underlying LoRaPHY and LoRaMac layers handle the data rate automatically
