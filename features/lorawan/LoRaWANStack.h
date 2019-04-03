@@ -426,7 +426,7 @@ public:
      * tick time and current tick time.
      * If the GPS time was not set by the network yet, the API returns zero.
      *
-     * @return Current GPS time in milliseconds
+     * @return Current GPS time in seconds
      *         Or 0 if the GPS time is not yet set by the network
      */
     lorawan_time_t get_current_gps_time(void);
