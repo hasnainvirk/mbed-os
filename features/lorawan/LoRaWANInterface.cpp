@@ -240,7 +240,7 @@ void LoRaWANInterface::set_current_gps_time(lorawan_time_t gps_time)
     _lw_stack.set_current_gps_time(gps_time);
 }
 
-lorawan_status_t LoRaWANInterface::set_system_time_utc(unsigned int tai_utc_diff)
+lorawan_status_t LoRaWANInterface::set_system_time_utc(int tai_utc_diff)
 {
     // do not lock here
 

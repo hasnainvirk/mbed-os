@@ -619,7 +619,7 @@ public:
      * @return LORAWAN_STATUS_OK if system time is set, negative error code
      *         otherwise.
      */
-    lorawan_status_t set_system_time_utc(unsigned int tai_utc_diff);
+    lorawan_status_t set_system_time_utc(int tai_utc_diff);
 
     /** Provides access to device Multicast register
      *
