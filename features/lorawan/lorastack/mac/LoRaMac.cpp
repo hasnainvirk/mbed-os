@@ -524,6 +524,7 @@ void LoRaMac::handle_data_frame(const uint8_t *const payload,
         }
         _mcps_indication.status == LORAMAC_EVENT_INFO_STATUS_MIC_FAIL ?
         tr_error("MIC failed") : tr_error("Too many frames lost");
+
         _mcps_indication.pending = false;
         return;
     }
@@ -535,7 +536,8 @@ void LoRaMac::handle_data_frame(const uint8_t *const payload,
             // we must drop the packet as per spec
             _mcps_indication.status = LORAMAC_EVENT_INFO_STATUS_ERROR;
             _mcps_indication.pending = false;
-            tr_error("Multicast Session %d: FCnt out of range", mcast_gid);
+            tr_error("Multicast Session %d: FCnt out of range (fcnt: %lu, min: %lu, max: %lu)", mcast_gid,
+                downlink_counter, _mcast_register->entry[mcast_gid].min_fcnt, _mcast_register->entry[mcast_gid].max_fcnt);
             return;
         }
         _mcast_register->entry[mcast_gid].fcnt = downlink_counter;
