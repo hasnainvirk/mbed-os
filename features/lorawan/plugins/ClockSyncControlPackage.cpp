@@ -63,7 +63,6 @@ uint16_t ClockSyncControlPackage::prepare_clock_sync_request(bool ans_required, 
 {
     lorawan_time_t dev_time = _get_gps_time_cb();
 
-    _clock_sync_token_req = (_clock_sync_token_req + 1) & 0x000F;
     uint8_t param_field = _clock_sync_token_req;
     if (ans_required) {
         SET_BIT(param_field, 4);
@@ -156,6 +155,8 @@ clk_sync_response_t *ClockSyncControlPackage::parse(const uint8_t *payload,
                     lorawan_time_t cur_gps_time = _get_gps_time_cb();
                     _set_gps_time_cb(cur_gps_time + time_correction);
                 }
+
+                _clock_sync_token_req = (_clock_sync_token_req + 1) & 0x000F;
 
                 break;
 
