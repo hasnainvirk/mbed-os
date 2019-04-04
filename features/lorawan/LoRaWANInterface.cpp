@@ -35,6 +35,7 @@ LoRaWANInterface::LoRaWANInterface(LoRaRadio &radio)
     _default_phy = new LoRaPHY_region;
     MBED_ASSERT(_default_phy);
     _lw_stack.bind_phy_and_radio_driver(radio, *_default_phy);
+    _lw_stack.update_multicast_addr_register(&_mcast_register);
 }
 
 LoRaWANInterface::LoRaWANInterface(LoRaRadio &radio, LoRaPHY &phy)
@@ -42,6 +43,7 @@ LoRaWANInterface::LoRaWANInterface(LoRaRadio &radio, LoRaPHY &phy)
 {
     _mcast_register.active_mask = 0;
     _lw_stack.bind_phy_and_radio_driver(radio, phy);
+    _lw_stack.update_multicast_addr_register(&_mcast_register);
 }
 
 LoRaWANInterface::~LoRaWANInterface()
