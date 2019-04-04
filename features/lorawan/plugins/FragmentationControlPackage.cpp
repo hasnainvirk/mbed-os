@@ -86,6 +86,7 @@ frag_ctrl_response_t *FragmentationControlPackage::parse(const uint8_t *payload,
         // check if the session is active for the given frag_index
         if (!BIT_SET_TEST(_session_ctx.active_mask, frag_index)) {
             // silently drop the fragment
+            tr_warn("Dropping packet, FragIndex %u not valid", frag_index);
             return NULL;
         }
 
@@ -95,8 +96,8 @@ frag_ctrl_response_t *FragmentationControlPackage::parse(const uint8_t *payload,
         if (msg_type == MSG_MULTICAST_FLAG) {
             bool can_continue = false;
             for (int i = 0; i < MBED_CONF_LORA_MAX_MULTICAST_SESSIONS; i++) {
-                if (BIT_SET_TEST(_session_ctx.frag_session[frag_index].mcast_group_mask, i)
-                        && BIT_SET_TEST(mcast_register->active_mask, i)
+                if (/*BIT_SET_TEST(_session_ctx.frag_session[frag_index].mcast_group_mask, i)
+                        && */BIT_SET_TEST(mcast_register->active_mask, i)
                         && dev_addr == mcast_register->entry[i].addr) {
                     can_continue = true;
                 }
@@ -104,6 +105,7 @@ frag_ctrl_response_t *FragmentationControlPackage::parse(const uint8_t *payload,
 
             if (!can_continue) {
                 // silently drop the fragment
+                tr_warn("Dropping packet, cannot find matching active multicast session");
                 return NULL;
             }
         }
@@ -141,6 +143,7 @@ frag_ctrl_response_t *FragmentationControlPackage::parse(const uint8_t *payload,
                 tr_error("Flash writing error");
                 _resp.type = FRAG_SESSION_STATUS;
                 _resp.status = FRAG_SESSION_FLASH_WRITE_ERROR;
+                _resp.index = frag_index;
                 return &_resp;
             }
 
@@ -149,10 +152,23 @@ frag_ctrl_response_t *FragmentationControlPackage::parse(const uint8_t *payload,
         } else if (_session_ctx.frag_session[frag_index].fragments_received
                    == _session_ctx.frag_session[frag_index].nb_frag
                    && opts->fasm->get_missing_frag_count() == 0) {
+
+            int r = opts->bd->program(payload + i,
+                                      opts->offset + ((n - 1) * frag_size),
+                                      frag_size);
+            if (r != 0) {
+                tr_error("Flash writing error");
+                _resp.type = FRAG_SESSION_STATUS;
+                _resp.status = FRAG_SESSION_FLASH_WRITE_ERROR;
+                _resp.index = frag_index;
+                return &_resp;
+            }
+
             // Fragmentation complete
             tr_info("**** Frag session complete ****");
             _resp.type = FRAG_SESSION_STATUS;
             _resp.status = FRAG_SESSION_COMPLETE;
+            _resp.index = frag_index;
             return &_resp;
         } else {
             // handle redundancy messages here
@@ -162,6 +178,7 @@ frag_ctrl_response_t *FragmentationControlPackage::parse(const uint8_t *payload,
                 tr_info(" ** Frag session complete **");
                 _resp.type = FRAG_SESSION_STATUS;
                 _resp.status = FRAG_SESSION_COMPLETE;
+                _resp.index = frag_index;
                 return &_resp;
             }
         }
@@ -317,4 +334,10 @@ frag_ctrl_response_t *FragmentationControlPackage::parse(const uint8_t *payload,
     _resp.cmd_ans.size = idx;
 
     return &_resp;
+}
+
+lorawan_frag_session_t *FragmentationControlPackage::get_frag_session(uint8_t index) {
+    if (index >= MBED_CONF_LORA_MAX_FRAG_SESSIONS) return NULL;
+
+    return &_session_ctx.frag_session[index];
 }

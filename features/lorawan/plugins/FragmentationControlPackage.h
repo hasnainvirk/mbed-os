@@ -79,6 +79,8 @@ typedef struct {
         frag_cmd_answer_t cmd_ans;
         frag_session_status_t status;
     };
+
+    uint8_t index;
 } frag_ctrl_response_t;
 
 /**
@@ -263,6 +265,11 @@ public:
                                 mbed::Callback<frag_bd_opts_t *(uint8_t frag_index, uint32_t desc)> opts_cb,
                                 const lorawan_mcast_register_t *mcast_register,
                                 uint32_t expected_descriptor = 0);
+
+    /**
+     * Get a fragmentation session by index
+     */
+    lorawan_frag_session_t *get_frag_session(uint8_t index);
 
 private:
     lorawan_frag_session_ctx_t _session_ctx;
