@@ -85,6 +85,10 @@ bool FragAssembler::initialize(FragBDWrapper *flash, uint16_t frame_count,
                                uint32_t flash_offset)
 {
     _flash = flash;
+    _nb_frags = frame_count;
+    _frag_size = frame_size;
+    _nb_red_frags = redundancy_max;
+    _flash_offset = flash_offset;
 
     // global for this session
     matrix_m2bin = (uint8_t *) calloc((_nb_red_frags / 8) * _nb_red_frags, 1);
