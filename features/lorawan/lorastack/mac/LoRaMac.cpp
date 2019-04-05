@@ -335,10 +335,15 @@ bool LoRaMac::message_integrity_check(const uint8_t *const payload,
     }
 
     // sizeof nws_skey must be the same as _params.keys.nwk_skey,
-    _lora_crypto.compute_mic(payload, size - LORAMAC_MFR_LEN,
-                             nwk_skey,
-                             sizeof(_params.keys.nwk_skey) * 8,
-                             address, DOWN_LINK, *downlink_counter, &mic);
+    int mic_ret = _lora_crypto.compute_mic(payload, size - LORAMAC_MFR_LEN,
+                                           nwk_skey,
+                                           sizeof(_params.keys.nwk_skey) * 8,
+                                           address, DOWN_LINK, *downlink_counter, &mic);
+
+    if (mic_ret != 0) {
+        tr_warn("MIC calculation failed (%d)", mic_ret);
+        return false;
+    }
 
     if (mic_rx != mic) {
         _mcps_indication.status = LORAMAC_EVENT_INFO_STATUS_MIC_FAIL;
